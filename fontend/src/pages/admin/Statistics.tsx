@@ -3,6 +3,13 @@ import { Card, Col, Row, Spin, Empty } from 'antd';
 import { Column, Pie } from '@ant-design/charts';
 import { useQuery } from '@tanstack/react-query';
 import * as applicationService from '../../services/applicationService';
+const statusMap: Record<string, string> = {
+  DRAFT: 'Nháp',
+  SUBMITTED: 'Đã nộp',
+  PENDING: 'Chờ duyệt',
+  APPROVED: 'Đã duyệt',
+  REJECTED: 'Từ chối',
+};
 
 const Statistics: React.FC = () => {
   const { data, isLoading } = useQuery({
@@ -52,15 +59,7 @@ const Statistics: React.FC = () => {
       content: '{name} ({percentage})',
     },
   };
-
-  const statusMap: Record<string, string> = {
-    DRAFT: 'Nháp',
-    SUBMITTED: 'Đã nộp',
-    PENDING: 'Chờ duyệt',
-    APPROVED: 'Đã duyệt',
-    REJECTED: 'Từ chối',
-  };
-
+  
   return (
     <div>
       <h2 style={{ marginBottom: 24 }}>Thống kê</h2>

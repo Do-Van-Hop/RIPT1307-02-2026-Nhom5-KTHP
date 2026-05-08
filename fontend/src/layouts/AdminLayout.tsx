@@ -29,7 +29,9 @@ const AdminLayout: React.FC = () => {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider collapsible>
-        <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.3)', borderRadius: 6 }} />
+        <div style={{ height: 32, margin: 16, color: '#fff', textAlign: 'center', fontWeight: 'bold' }}>
+          Admin Panel
+        </div>
         <Menu
           theme="dark"
           selectedKeys={[location.pathname]}

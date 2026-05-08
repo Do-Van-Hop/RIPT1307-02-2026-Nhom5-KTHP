@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Select, Space, Spin } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import * as catalogService from '../services/catalogService';
+import tsrequest from '../services/tsrequest';
 
 interface Props {
   onSelect: (schoolId: number, majorId: number, subjectGroupId: number) => void;
@@ -33,7 +34,7 @@ const CandidateCascader: React.FC<Props> = ({ onSelect }) => {
     queryKey: ['majorDetail', selectedMajor],
     queryFn: async () => {
       if (!selectedMajor) return null;
-      const res = await tsrequest.get(`/majors/${selectedMajor}`); // cần tạo thêm service nếu chưa có
+      const res = await tsrequest.get(`/majors/${selectedMajor}`);
       return res.data;
     },
     enabled: !!selectedMajor,

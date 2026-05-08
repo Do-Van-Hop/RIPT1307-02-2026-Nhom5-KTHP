@@ -20,10 +20,9 @@ import AdminApplicationDetail from './pages/admin/ApplicationDetail';
 import Statistics from './pages/admin/Statistics';
 import NotFound from './pages/NotFound';
 import Forbidden from './pages/Forbidden';
-
-const Dashboard = () => <div>Admin Dashboard</div>;
-const CandidateApplications = () => <div>Danh sách hồ sơ</div>;
-const CandidateResults = () => <div>Kết quả</div>;
+import Dashboard from './pages/admin/Dashboard';
+import Profile from './pages/candidate/Profile';
+import Results from './pages/candidate/Results'; 
 
 const queryClient = new QueryClient();
 
@@ -47,13 +46,12 @@ const App: React.FC = () => {
             <Route element={<ProtectedRoute allowedRoles={['candidate']} />}>
               <Route path="/candidate" element={<CandidateLayout />}>
                 <Route index element={<Navigate to="applications" replace />} />
-                <Route path="applications" element={<CandidateApplications />} />
-                <Route path="results" element={<CandidateResults />} />
-                <Route index element={<Navigate to="applications" replace />} />
                 <Route path="applications" element={<MyApplications />} />
                 <Route path="applications/new" element={<ApplicationForm />} />
                 <Route path="applications/:id" element={<ApplicationDetail />} />
                 <Route path="applications/:id/edit" element={<ApplicationForm />} />
+                <Route path="results" element={<Results />} />
+                <Route path="profile" element={<Profile />} />   
               </Route>
             </Route>
 
