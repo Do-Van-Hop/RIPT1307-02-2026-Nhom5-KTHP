@@ -4,7 +4,7 @@ from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.models.user import User
+from app.models.user import User, RoleEnum
 from app.core.config import SECRET_KEY, ALGORITHM
 
 # dùng HTTPBearer thay cho OAuth2
@@ -34,3 +34,8 @@ def get_current_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     return user
+
+def require_admin(current_user: User = Depends(get_current_user)):
+    if current_user.role != RoleEnum.admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+    return current_user

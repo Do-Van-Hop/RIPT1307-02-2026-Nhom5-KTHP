@@ -18,7 +18,7 @@ app.include_router(file.router)
 
 @app.get("/favicon.ico")
 def favicon():
-    return FileResponse("favicon.ico")
+    return {}
 
 @app.get("/")
 def root():
