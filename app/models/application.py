@@ -20,11 +20,13 @@ class Application(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     school_id = Column(Integer, ForeignKey("schools.id"))
     major_id = Column(Integer, ForeignKey("majors.id"))
-    subject_group_id = Column(Integer, ForeignKey("subject_groups.id"))  # 🔥 thêm
+    subject_group_id = Column(Integer, ForeignKey("subject_groups.id"))
 
     full_name = Column(String(255))
     dob = Column(Date)
     phone = Column(String(20))
+    
+    cccd_number = Column(String(20))
 
     score = Column(Float)
     priority = Column(Integer)

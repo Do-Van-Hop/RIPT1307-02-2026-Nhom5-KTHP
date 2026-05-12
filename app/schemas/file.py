@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 
+class FileItem(BaseModel):
+    file_url: str
+    file_type: str
 
 class FileResponse(BaseModel):
     id: int
