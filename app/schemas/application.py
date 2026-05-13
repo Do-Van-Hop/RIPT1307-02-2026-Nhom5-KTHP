@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import date
 
 from app.schemas.file import FileItem
@@ -17,9 +17,9 @@ class ApplicationCreate(BaseModel):
     files: list[FileItem]
 
 class ApplicationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     full_name: str
     status: str
     cccd_number: str
-    class Config:
-        from_attributes = True
