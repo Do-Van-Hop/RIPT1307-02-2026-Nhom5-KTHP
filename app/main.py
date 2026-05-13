@@ -5,6 +5,7 @@ from app.core.cloudinary_config import init_cloudinary
 
 from app.routers import auth, application, school, major, subject_group, file, stats
 
+
 app = FastAPI()
 
 init_cloudinary()
@@ -19,7 +20,7 @@ app.include_router(stats.router)
 
 @app.get("/favicon.ico")
 def favicon():
-    return {}
+    return FileResponse("favicon.ico")
 
 @app.get("/")
 def root():
