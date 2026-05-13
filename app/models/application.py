@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Date, Float, Enum, TIMESTAMP
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from app.db.database import Base
 import enum
 
@@ -34,3 +35,9 @@ class Application(Base):
     status = Column(Enum(ApplicationStatus), default=ApplicationStatus.DRAFT)
 
     created_at = Column(TIMESTAMP, server_default=func.now())
+    
+    files = relationship(
+        "File",
+        backref="application",
+        cascade="all, delete"
+    )

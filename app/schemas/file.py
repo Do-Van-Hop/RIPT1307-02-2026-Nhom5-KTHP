@@ -10,4 +10,4 @@ class FileResponse(BaseModel):
     id: int
     file_url: str
     file_type: str
-    file_size: int
+    file_size: int | None = None

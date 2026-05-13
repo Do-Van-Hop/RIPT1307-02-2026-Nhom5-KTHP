@@ -15,7 +15,8 @@ from app.models.file import File
 
 from app.schemas.application import (
     ApplicationCreate,
-    ApplicationResponse
+    ApplicationResponse,
+    ApplicationDetailResponse
 )
 
 from app.core.deps import (
@@ -248,3 +249,34 @@ def reject_application(
     return {
         "message": "Application rejected"
     }
+    
+@router.get(
+    "/{app_id}",
+    response_model=ApplicationDetailResponse
+)
+def get_application_detail(
+    app_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    app = db.query(Application).filter(
+        Application.id == app_id
+    ).first()
+
+    if not app:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found"
+        )
+
+    if current_user.role.value == "admin":
+        return app
+
+    if app.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Permission denied"
+        )
+
+    return app
