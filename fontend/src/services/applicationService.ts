@@ -28,7 +28,7 @@ export const deleteApplication = (id: number) => tsrequest.delete(`/applications
 export const uploadFile = (file: File) => {
   const formData = new FormData();
   formData.append('file', file);
-  return tsrequest.post('/upload', formData, {
+  return tsrequest.post('/file/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
