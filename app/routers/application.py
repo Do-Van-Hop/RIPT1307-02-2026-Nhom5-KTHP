@@ -76,6 +76,7 @@ def create_application(
         cccd_number=data.cccd_number,
 
         score=data.score,
+        scores=data.scores,
         priority=data.priority,
 
         status=ApplicationStatus.DRAFT
@@ -281,6 +282,7 @@ def update_application(
     app.cccd_number = data.cccd_number
 
     app.score = data.score
+    app.scores = data.scores
     app.priority = data.priority
 
     db.query(File).filter(

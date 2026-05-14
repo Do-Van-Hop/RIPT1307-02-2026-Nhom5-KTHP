@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, Float, Enum, TIMESTAMP
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, Float, Enum, TIMESTAMP, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.db.database import Base
@@ -29,6 +29,7 @@ class Application(Base):
     
     cccd_number = Column(String(20))
     score = Column(Float)
+    scores = Column(JSON)
     priority = Column(Integer)
 
     status = Column(Enum(ApplicationStatus), default=ApplicationStatus.DRAFT)

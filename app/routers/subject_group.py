@@ -14,7 +14,7 @@ router = APIRouter(prefix="/subject-groups", tags=["Subject Groups"])
 
 @router.post("/", response_model=SubjectGroupResponse)
 def create_group(data: SubjectGroupCreate, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
-    group = SubjectGroup(name=data.name)
+    group = SubjectGroup(name=data.name, subjects=data.subjects)
     db.add(group)
     db.commit()
     db.refresh(group)
@@ -62,7 +62,7 @@ def update_subject_group(
         )
 
     group.name = data.name
-
+    group.subjects = data.subjects
     db.commit()
     db.refresh(group)
 

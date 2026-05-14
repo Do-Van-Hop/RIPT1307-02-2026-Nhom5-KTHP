@@ -13,6 +13,7 @@ class ApplicationCreate(BaseModel):
     phone: str
     cccd_number: str
     score: float
+    scores: dict[str, float]
     priority: int
     files: list[FileItem]
 
@@ -23,6 +24,7 @@ class ApplicationResponse(BaseModel):
     full_name: str
     status: str
     cccd_number: str
+    scores: dict[str, float]
 
 class ApplicationDetailResponse(BaseModel):
 
@@ -39,6 +41,7 @@ class ApplicationDetailResponse(BaseModel):
     status: str
     files: list[FileResponse]
     reject_reason: str | None = None
+    scores: dict[str, float]
     model_config = ConfigDict(
         from_attributes=True
     )
