@@ -125,3 +125,24 @@ CREATE TABLE files (
         REFERENCES applications(id)
         ON DELETE CASCADE
 );
+
+-- ============================================
+-- CẬP NHẬT CÁC TRƯỜNG CÒN THIẾU
+-- ============================================
+
+-- 1. Thêm cột subjects (JSON) vào bảng subject_groups
+ALTER TABLE subject_groups
+ADD COLUMN subjects JSON NOT NULL;
+
+-- 2. Thêm các cột còn thiếu vào bảng applications
+ALTER TABLE applications
+ADD COLUMN cccd_number VARCHAR(20),
+ADD COLUMN scores JSON,
+ADD COLUMN submitted_at TIMESTAMP NULL,
+ADD COLUMN reject_reason VARCHAR(1000) NULL; 
+
+-- 3. Sửa cột file_type trong bảng files thành ENUM
+ALTER TABLE files
+MODIFY COLUMN file_type ENUM('TRANSCRIPT', 'CCCD_FRONT', 'CCCD_BACK', 'CERTIFICATE');
+MODIFY COLUMN file_url VARCHAR(1000);
+
