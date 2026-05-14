@@ -28,13 +28,13 @@ class Application(Base):
     phone = Column(String(20))
     
     cccd_number = Column(String(20))
-
     score = Column(Float)
     priority = Column(Integer)
 
     status = Column(Enum(ApplicationStatus), default=ApplicationStatus.DRAFT)
 
     created_at = Column(TIMESTAMP, server_default=func.now())
+    reject_reason = Column(String(1000), nullable=True)
     
     files = relationship(
         "File",

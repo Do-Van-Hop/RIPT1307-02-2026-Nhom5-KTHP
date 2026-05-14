@@ -16,7 +16,9 @@ from app.models.file import File
 from app.schemas.application import (
     ApplicationCreate,
     ApplicationResponse,
-    ApplicationDetailResponse
+    ApplicationDetailResponse,
+    ApplicationUpdate,
+    ApplicationStatusUpdate
 )
 
 from app.core.deps import (
@@ -88,7 +90,8 @@ def create_application(
         new_file = File(
             application_id=app.id,
             file_url=item.file_url,
-            file_type=item.file_type
+            file_type=item.file_type,
+            file_size=None
         )
 
         db.add(new_file)
@@ -152,104 +155,6 @@ def get_all_applications(
 
     return applications
 
-@router.put("/admin/{app_id}/approve")
-def approve_application(
-    app_id: int,
-    db: Session = Depends(get_db),
-    admin: User = Depends(require_admin)
-):
-
-    app = db.query(Application).filter(
-        Application.id == app_id
-    ).first()
-
-    if not app:
-        raise HTTPException(
-            status_code=404,
-            detail="Application not found"
-        )
-
-    if app.status != ApplicationStatus.PENDING:
-        raise HTTPException(
-            status_code=400,
-            detail="Application is not pending"
-        )
-
-    # update status
-    app.status = ApplicationStatus.APPROVED
-
-    db.commit()
-    db.refresh(app)
-
-    # tìm user
-    user = db.query(User).filter(
-        User.id == app.user_id
-    ).first()
-
-    # gửi email
-    try:
-        send_email(
-            to_email=user.email,
-            subject="Hồ sơ đã được duyệt",
-            body="Chúc mừng! Hồ sơ tuyển sinh của bạn đã được duyệt."
-        )
-
-    except Exception as e:
-        print("Send email error:", e)
-
-    return {
-        "message": "Application approved"
-    }
-
-@router.put("/admin/{app_id}/reject")
-def reject_application(
-    app_id: int,
-    db: Session = Depends(get_db),
-    admin: User = Depends(require_admin)
-):
-
-    app = db.query(Application).filter(
-        Application.id == app_id
-    ).first()
-
-    if not app:
-        raise HTTPException(
-            status_code=404,
-            detail="Application not found"
-        )
-
-    if app.status != ApplicationStatus.PENDING:
-        raise HTTPException(
-            status_code=400,
-            detail="Application is not pending"
-        )
-
-    # update status
-    app.status = ApplicationStatus.REJECTED
-
-    db.commit()
-    db.refresh(app)
-
-    # tìm user
-    user = db.query(User).filter(
-        User.id == app.user_id
-    ).first()
-
-    # gửi email
-    try:
-        send_email(
-            to_email=user.email,
-            subject="Hồ sơ bị từ chối",
-            body="Rất tiếc, hồ sơ tuyển sinh của bạn đã bị từ chối."
-        )
-
-    except Exception as e:
-        print("Send email error:", e)
-
-    return {
-        "message": "Application rejected"
-    }
-    
 @router.get(
     "/{app_id}",
     response_model=ApplicationDetailResponse
@@ -257,7 +162,7 @@ def reject_application(
 def get_application_detail(
     app_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
 
     app = db.query(Application).filter(
@@ -280,3 +185,214 @@ def get_application_detail(
         )
 
     return app
+
+@router.put(
+    "/{app_id}",
+    response_model=ApplicationResponse
+)
+def update_application(
+    app_id: int,
+    data: ApplicationUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    app = db.query(Application).filter(
+        Application.id == app_id,
+        Application.user_id == current_user.id
+    ).first()
+
+    if not app:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found"
+        )
+
+    if app.status != ApplicationStatus.DRAFT:
+        raise HTTPException(
+            status_code=400,
+            detail="Only DRAFT application can be edited"
+        )
+
+    major = db.query(Major).filter(
+        Major.id == data.major_id,
+        Major.school_id == data.school_id
+    ).first()
+
+    if not major:
+        raise HTTPException(
+            status_code=400,
+            detail="Major does not belong to this school"
+        )
+
+    valid_group = db.query(MajorSubjectGroup).filter(
+        MajorSubjectGroup.major_id == data.major_id,
+        MajorSubjectGroup.subject_group_id == data.subject_group_id
+    ).first()
+
+    if not valid_group:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid subject group for this major"
+        )
+
+    app.school_id = data.school_id
+    app.major_id = data.major_id
+    app.subject_group_id = data.subject_group_id
+
+    app.full_name = data.full_name
+    app.dob = data.dob
+    app.phone = data.phone
+
+    app.cccd_number = data.cccd_number
+
+    app.score = data.score
+    app.priority = data.priority
+
+    db.query(File).filter(
+        File.application_id == app.id
+    ).delete()
+
+    for item in data.files:
+
+        new_file = File(
+            application_id=app.id,
+            file_url=item.file_url,
+            file_type=item.file_type,
+            file_size=None
+        )
+
+        db.add(new_file)
+
+    db.commit()
+
+    db.refresh(app)
+
+    return app
+
+@router.delete("/{app_id}")
+def delete_application(
+    app_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    app = db.query(Application).filter(
+        Application.id == app_id,
+        Application.user_id == current_user.id
+    ).first()
+
+    if not app:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found"
+        )
+
+    if app.status != ApplicationStatus.DRAFT:
+        raise HTTPException(
+            status_code=400,
+            detail="Only DRAFT application can be deleted"
+        )
+
+    db.delete(app)
+
+    db.commit()
+
+    return {
+        "message": "Application deleted successfully"
+    }
+    
+@router.patch("/admin/{app_id}/status")
+def update_application_status(
+    app_id: int,
+    data: ApplicationStatusUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin)
+):
+
+    app = db.query(Application).filter(
+        Application.id == app_id
+    ).first()
+
+    if not app:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found"
+        )
+
+    if app.status != ApplicationStatus.PENDING:
+        raise HTTPException(
+            status_code=400,
+            detail="Only PENDING application can change status"
+        )
+
+    allowed_status = [
+        ApplicationStatus.APPROVED,
+        ApplicationStatus.REJECTED
+    ]
+
+    try:
+        new_status = ApplicationStatus(data.status)
+
+    except:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid status"
+        )
+
+    if new_status not in allowed_status:
+        raise HTTPException(
+            status_code=400,
+            detail="Status not allowed"
+        )
+
+    app.status = new_status
+
+    if new_status == ApplicationStatus.REJECTED:
+
+        if not data.reason:
+            raise HTTPException(
+                status_code=400,
+                detail="Reject reason is required"
+            )
+
+        app.reject_reason = data.reason
+
+    else:
+
+        app.reject_reason = None
+
+    db.commit()
+    db.refresh(app)
+
+    user = db.query(User).filter(
+        User.id == app.user_id
+    ).first()
+
+    try:
+
+        if new_status == ApplicationStatus.APPROVED:
+
+            send_email(
+                to_email=user.email,
+                subject="Hồ sơ đã được duyệt",
+                body="Chúc mừng! Hồ sơ của bạn đã được duyệt."
+            )
+
+        else:
+
+            reason_text = data.reason or "Không có lý do cụ thể"
+
+            send_email(
+                to_email=user.email,
+                subject="Hồ sơ bị từ chối",
+                body=f"Hồ sơ của bạn bị từ chối.\nLý do: {reason_text}"
+            )
+
+    except Exception as e:
+        print("Send email error:", e)
+
+    return {
+        "message": "Application status updated",
+        "new_status": app.status
+    }
