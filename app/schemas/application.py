@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from datetime import date
+from datetime import date, datetime
 
 from app.schemas.file import FileItem, FileResponse
 
@@ -25,6 +25,7 @@ class ApplicationResponse(BaseModel):
     status: str
     cccd_number: str
     scores: dict[str, float]
+    submitted_at: datetime | None = None
 
 class ApplicationDetailResponse(BaseModel):
 
@@ -42,6 +43,7 @@ class ApplicationDetailResponse(BaseModel):
     files: list[FileResponse]
     reject_reason: str | None = None
     scores: dict[str, float]
+    submitted_at: datetime | None = None
     model_config = ConfigDict(
         from_attributes=True
     )

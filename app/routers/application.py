@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from app.db.database import get_db
 
@@ -139,7 +140,7 @@ def submit_application(
         )
 
     app.status = ApplicationStatus.PENDING
-
+    app.submitted_at = datetime.now()
     db.commit()
 
     return {

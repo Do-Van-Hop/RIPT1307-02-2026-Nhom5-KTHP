@@ -35,6 +35,7 @@ class Application(Base):
     status = Column(Enum(ApplicationStatus), default=ApplicationStatus.DRAFT)
 
     created_at = Column(TIMESTAMP, server_default=func.now())
+    submitted_at = Column(TIMESTAMP, nullable=True)
     reject_reason = Column(String(1000), nullable=True)
     
     files = relationship(
