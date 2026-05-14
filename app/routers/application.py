@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -145,15 +145,49 @@ def submit_application(
         "message": "Application submitted"
     }
 
-@router.get("/admin/all")
-def get_all_applications(
+# filter, phân trang application (admin)
+@router.get("/")
+def get_applications(
+    status: str | None = Query(default=None),
+    school_id: int | None = Query(default=None),
+    major_id: int | None = Query(default=None),
+
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
+
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin)
 ):
 
-    applications = db.query(Application).all()
+    query = db.query(Application)
 
-    return applications
+    if status:
+        query = query.filter(
+            Application.status == status
+        )
+
+    if school_id:
+        query = query.filter(
+            Application.school_id == school_id
+        )
+        
+    if major_id:
+        query = query.filter(
+            Application.major_id == major_id
+        )
+
+    total = query.count()
+
+    offset = (page - 1) * limit
+
+    applications = query.offset(offset).limit(limit).all()
+
+    return {
+        "items": applications,
+        "total": total,
+        "page": page,
+        "limit": limit
+    }
 
 @router.get(
     "/{app_id}",
