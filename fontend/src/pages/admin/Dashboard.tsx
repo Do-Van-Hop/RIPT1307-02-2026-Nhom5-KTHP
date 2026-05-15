@@ -40,29 +40,26 @@ const Dashboard: React.FC = () => {
   const { data: recentApps, isLoading: recentLoading } = useQuery({
     queryKey: ['recentApplications', 10],
     queryFn: async () => {
-      // Giả sử API hỗ trợ sort, nếu không thì lấy danh sách mới nhất từ kết quả trả về.
-      // Ở đây dùng getAllApplications với page=1, limit=10, và có thể thêm sort (nếu backend hỗ trợ)
       const res = await applicationService.getAllApplications({ page: 1, limit: 10 });
-      // Nếu API trả về items, dùng luôn; nếu không thì trả về mảng rỗng
       return res.data?.items || [];
     },
   });
 
-  const totalApplications = stats?.byStatus?.reduce((sum: number, item: any) => sum + item.count, 0) || 0;
-  const pendingCount = stats?.byStatus?.find((item: any) => item.status === 'PENDING')?.count || 0;
-  const approvedCount = stats?.byStatus?.find((item: any) => item.status === 'APPROVED')?.count || 0;
-  const rejectedCount = stats?.byStatus?.find((item: any) => item.status === 'REJECTED')?.count || 0;
+  const totalApplications = stats?.byStatus?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
+  const pendingCount = stats?.byStatus?.find((item: any) => item.status === 'PENDING')?.total || 0;
+  const approvedCount = stats?.byStatus?.find((item: any) => item.status === 'APPROVED')?.total || 0;
+  const rejectedCount = stats?.byStatus?.find((item: any) => item.status === 'REJECTED')?.total || 0;
 
   const schoolChartData = stats?.bySchool?.slice(0, 5).map((item: any) => ({
-    schoolName: item.schoolName,
-    count: item.count,
+    schoolName: item.school,
+    count: item.total,
   })) || [];
 
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 70 },
-    { title: 'Thí sinh', dataIndex: ['user', 'email'], key: 'email' },
-    { title: 'Trường', dataIndex: ['school', 'name'], key: 'school' },
-    { title: 'Ngành', dataIndex: ['major', 'name'], key: 'major' },
+    { title: 'Thí sinh ID', dataIndex: 'user_id', key: 'user_id' },
+    { title: 'Trường ID', dataIndex: 'school_id', key: 'school_id' },
+    { title: 'Ngành ID', dataIndex: 'major_id', key: 'major_id' },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
@@ -75,27 +72,19 @@ const Dashboard: React.FC = () => {
     },
     {
       title: 'Ngày nộp',
-      dataIndex: 'submittedAt',
-      key: 'submittedAt',
+      dataIndex: 'submitted_at',
+      key: 'submitted_at',
       render: (date: string) => (date ? new Date(date).toLocaleDateString('vi-VN') : '-'),
     },
   ];
 
   if (statsLoading) {
-    return (
-      <div style={{ textAlign: 'center', padding: 50 }}>
-        <Spin size="large" />
-      </div>
-    );
+    return <div style={{ textAlign: 'center', padding: 50 }}><Spin size="large" /></div>;
   }
 
   return (
     <div>
-      <Title level={2} style={{ marginBottom: 24 }}>
-        Tổng quan
-      </Title>
-
-      {/* Hàng thẻ số liệu */}
+      <Title level={2} style={{ marginBottom: 24 }}>Tổng quan</Title>
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}>
           <Card>
@@ -139,7 +128,6 @@ const Dashboard: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Hàng biểu đồ Top 5 trường */}
       <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
         <Col xs={24}>
           <Card title="Top 5 trường có nhiều hồ sơ nhất">
@@ -159,7 +147,6 @@ const Dashboard: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Hàng bảng hồ sơ mới nhất (10 mới nhất) */}
       <Row style={{ marginTop: 24 }}>
         <Col span={24}>
           <Card title="10 hồ sơ mới nhất">

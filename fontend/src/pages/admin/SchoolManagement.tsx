@@ -7,7 +7,6 @@ import * as catalogService from '../../services/catalogService';
 interface School {
   id: number;
   name: string;
-  code: string;
 }
 
 const SchoolManagement: React.FC = () => {
@@ -32,11 +31,12 @@ const SchoolManagement: React.FC = () => {
       setIsModalOpen(false);
       form.resetFields();
     },
-    onError: (err: any) => message.error(err?.response?.data?.message || 'Lỗi'),
+    onError: (err: any) => message.error(err?.response?.data?.detail || 'Lỗi khi thêm trường'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: unknown }) => catalogService.updateSchool(id, data),
+    mutationFn: ({ id, data }: { id: number; data: { name: string } }) =>
+      catalogService.updateSchool(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schools'] });
       message.success('Cập nhật trường thành công');
@@ -44,7 +44,7 @@ const SchoolManagement: React.FC = () => {
       setEditingSchool(null);
       form.resetFields();
     },
-    onError: (err: any) => message.error(err?.response?.data?.message || 'Lỗi'),
+    onError: (err: any) => message.error(err?.response?.data?.detail || 'Lỗi cập nhật'),
   });
 
   const deleteMutation = useMutation({
@@ -53,7 +53,7 @@ const SchoolManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['schools'] });
       message.success('Xóa trường thành công');
     },
-    onError: (err: any) => message.error(err?.response?.data?.message || 'Lỗi'),
+    onError: (err: any) => message.error(err?.response?.data?.detail || 'Lỗi xóa trường'),
   });
 
   const handleAdd = () => {
@@ -64,7 +64,7 @@ const SchoolManagement: React.FC = () => {
 
   const handleEdit = (record: School) => {
     setEditingSchool(record);
-    form.setFieldsValue(record);
+    form.setFieldsValue({ name: record.name });
     setIsModalOpen(true);
   };
 
@@ -72,18 +72,16 @@ const SchoolManagement: React.FC = () => {
     try {
       const values = await form.validateFields();
       if (editingSchool) {
-        updateMutation.mutate({ id: editingSchool.id, data: values });
+        updateMutation.mutate({ id: editingSchool.id, data: { name: values.name } });
       } else {
-        createMutation.mutate(values);
+        createMutation.mutate({ name: values.name });
       }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
-      // validation failed
+      // validation error
     }
   };
 
   const columns = [
-    { title: 'Mã trường', dataIndex: 'code', key: 'code' },
     { title: 'Tên trường', dataIndex: 'name', key: 'name' },
     {
       title: 'Thao tác',
@@ -94,7 +92,7 @@ const SchoolManagement: React.FC = () => {
             Sửa
           </Button>
           <Popconfirm
-            title="Xác nhận xóa trường này?"
+            title="Xóa trường sẽ xóa tất cả ngành thuộc trường này và các hồ sơ liên quan. Tiếp tục?"
             onConfirm={() => deleteMutation.mutate(record.id)}
             okText="Xóa"
             cancelText="Hủy"
@@ -116,15 +114,7 @@ const SchoolManagement: React.FC = () => {
           Thêm trường
         </Button>
       </div>
-
-      <Table
-        dataSource={data}
-        columns={columns}
-        rowKey="id"
-        loading={isLoading}
-        pagination={{ pageSize: 10 }}
-      />
-
+      <Table dataSource={data} columns={columns} rowKey="id" loading={isLoading} pagination={{ pageSize: 10 }} />
       <Modal
         title={editingSchool ? 'Sửa trường' : 'Thêm trường mới'}
         open={isModalOpen}
@@ -133,13 +123,6 @@ const SchoolManagement: React.FC = () => {
         confirmLoading={createMutation.isPending || updateMutation.isPending}
       >
         <Form form={form} layout="vertical">
-          <Form.Item
-            name="code"
-            label="Mã trường"
-            rules={[{ required: true, message: 'Vui lòng nhập mã trường' }]}
-          >
-            <Input />
-          </Form.Item>
           <Form.Item
             name="name"
             label="Tên trường"

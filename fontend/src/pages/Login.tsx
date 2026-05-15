@@ -4,6 +4,7 @@ import { MailOutlined, LockOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import tsrequest from '../services/tsrequest';
 import { useAuthStore } from '../store/authStore';
+import { AxiosError } from 'axios';
 
 const { Title } = Typography;
 
@@ -24,8 +25,8 @@ const Login: React.FC = () => {
         email: values.email,
         password: values.password,
       });
-      const { user, token } = response.data;
-      login(user, token);
+      const { access_token, user } = response.data;
+      login(user, access_token);   // store nhận token
       message.success('Đăng nhập thành công!');
       if (user.role === 'admin') {
         navigate('/admin');
@@ -35,7 +36,7 @@ const Login: React.FC = () => {
     } catch (error: unknown) {
       let msg = 'Đăng nhập thất bại';
       if (error instanceof AxiosError) {
-        msg = error.response?.data?.message || msg;
+        msg = error.response?.data?.detail || error.response?.data?.message || msg;
       }
       message.error(msg);
     } finally {

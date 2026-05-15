@@ -3,6 +3,7 @@ import { Card, Col, Row, Spin, Empty } from 'antd';
 import { Column, Pie } from '@ant-design/charts';
 import { useQuery } from '@tanstack/react-query';
 import * as applicationService from '../../services/applicationService';
+
 const statusMap: Record<string, string> = {
   DRAFT: 'Nháp',
   SUBMITTED: 'Đã nộp',
@@ -25,41 +26,33 @@ const Statistics: React.FC = () => {
 
   const schoolColumnConfig = {
     data: data.bySchool || [],
-    xField: 'schoolName',
-    yField: 'count',
-    label: {
-      position: 'top' as const,
-      style: { fill: '#000000' },
-    },
-    xAxis: { label: { autoRotate: true } },
-    meta: { count: { alias: 'Số lượng hồ sơ' } },
+    xField: 'school',
+    yField: 'total',
+    label: { position: 'top' as const, style: { fill: '#000000' } },
+    xAxis: { label: { autoRotate: true, autoHide: true } },
+    meta: { total: { alias: 'Số lượng hồ sơ' } },
   };
 
   const majorColumnConfig = {
     data: data.byMajor || [],
-    xField: 'majorName',
-    yField: 'count',
+    xField: 'major',
+    yField: 'total',
     label: { position: 'top' as const },
-    xAxis: { label: { autoRotate: true } },
-    meta: { count: { alias: 'Số lượng hồ sơ' } },
-    seriesField: 'schoolName',
-    isGroup: true,
+    xAxis: { label: { autoRotate: true, autoHide: true } },
+    meta: { total: { alias: 'Số lượng hồ sơ' } },
   };
 
   const statusPieConfig = {
     data: (data.byStatus || []).map((item: any) => ({
       ...item,
-      status: statusMap[item.status] ? statusMap[item.status].text : item.status,
+      status: statusMap[item.status] || item.status,
     })),
-    angleField: 'count',
+    angleField: 'total',
     colorField: 'status',
     radius: 0.8,
-    label: {
-      type: 'outer',
-      content: '{name} ({percentage})',
-    },
+    label: { type: 'outer', content: '{name} ({percentage})' },
   };
-  
+
   return (
     <div>
       <h2 style={{ marginBottom: 24 }}>Thống kê</h2>

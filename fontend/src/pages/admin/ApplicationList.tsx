@@ -46,8 +46,8 @@ const ApplicationList: React.FC = () => {
     queryKey: ['adminApplications', filters],
     queryFn: async () => {
       const res = await applicationService.getAllApplications({
-        schoolId: filters.schoolId,
-        majorId: filters.majorId,
+        school_id: filters.schoolId,
+        major_id: filters.majorId,
         status: filters.status,
         page: filters.page,
         limit: filters.limit,
@@ -65,21 +65,37 @@ const ApplicationList: React.FC = () => {
       message.success('Cập nhật trạng thái thành công');
     },
     onError: (err: any) => {
-      message.error(err.response?.data?.message || 'Lỗi khi cập nhật trạng thái');
+      message.error(err.response?.data?.detail || 'Lỗi khi cập nhật trạng thái');
     },
   });
 
   const columns = [
-    { title: 'ID', dataIndex: 'id', key: 'id', width: 60 },
+    { title: 'ID', dataIndex: 'id', key: 'id', width: 70 },
     {
-      title: 'Thí sinh',
-      dataIndex: ['user', 'email'],
-      key: 'user',
-      render: (email: string) => email || 'N/A',
+      title: 'Thí sinh (ID)',
+      dataIndex: 'user_id',
+      key: 'user_id',
+      render: (userId: number) => userId || 'N/A',
     },
-    { title: 'Trường', dataIndex: ['school', 'name'], key: 'school' },
-    { title: 'Ngành', dataIndex: ['major', 'name'], key: 'major' },
-    { title: 'Tổ hợp', dataIndex: ['subjectGroup', 'name'], key: 'subjectGroup' },
+    {
+      title: 'Trường',
+      dataIndex: 'school_id',
+      key: 'school_id',
+      render: (schoolId: number) => {
+        const school = schools?.find((s: any) => s.id === schoolId);
+        return school?.name || `ID: ${schoolId}`;
+      },
+    },
+    {
+      title: 'Ngành',
+      dataIndex: 'major_id',
+      key: 'major_id',
+      render: (majorId: number) => {
+        const major = majors?.find((m: any) => m.id === majorId);
+        return major?.name || `ID: ${majorId}`;
+      },
+    },
+    { title: 'Tổ hợp ID', dataIndex: 'subject_group_id', key: 'subject_group_id' },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
@@ -91,8 +107,8 @@ const ApplicationList: React.FC = () => {
     },
     {
       title: 'Ngày nộp',
-      dataIndex: 'submittedAt',
-      key: 'submittedAt',
+      dataIndex: 'submitted_at',
+      key: 'submitted_at',
       render: (date: string) => (date ? new Date(date).toLocaleDateString('vi-VN') : '-'),
     },
     {
@@ -115,12 +131,7 @@ const ApplicationList: React.FC = () => {
                 okText="Duyệt"
                 cancelText="Hủy"
               >
-                <Button
-                  icon={<CheckOutlined />}
-                  size="small"
-                  type="primary"
-                  loading={updateStatusMutation.isPending}
-                >
+                <Button icon={<CheckOutlined />} size="small" type="primary" loading={updateStatusMutation.isPending}>
                   Duyệt
                 </Button>
               </Popconfirm>
@@ -130,12 +141,7 @@ const ApplicationList: React.FC = () => {
                 okText="Từ chối"
                 cancelText="Hủy"
               >
-                <Button
-                  icon={<CloseOutlined />}
-                  size="small"
-                  danger
-                  loading={updateStatusMutation.isPending}
-                >
+                <Button icon={<CloseOutlined />} size="small" danger loading={updateStatusMutation.isPending}>
                   Từ chối
                 </Button>
               </Popconfirm>
@@ -159,17 +165,12 @@ const ApplicationList: React.FC = () => {
           allowClear
           style={{ width: 220 }}
           value={filters.schoolId}
-          onChange={(value) =>
-            setFilters({ ...filters, schoolId: value, majorId: undefined, page: 1 })
-          }
+          onChange={(value) => setFilters({ ...filters, schoolId: value, majorId: undefined, page: 1 })}
         >
           {schools?.map((s: any) => (
-            <Option key={s.id} value={s.id}>
-              {s.name}
-            </Option>
+            <Option key={s.id} value={s.id}>{s.name}</Option>
           ))}
         </Select>
-
         <Select
           placeholder="Chọn ngành"
           allowClear
@@ -179,12 +180,9 @@ const ApplicationList: React.FC = () => {
           onChange={(value) => setFilters({ ...filters, majorId: value, page: 1 })}
         >
           {majors?.map((m: any) => (
-            <Option key={m.id} value={m.id}>
-              {m.name}
-            </Option>
+            <Option key={m.id} value={m.id}>{m.name}</Option>
           ))}
         </Select>
-
         <Select
           placeholder="Trạng thái"
           allowClear
@@ -199,7 +197,6 @@ const ApplicationList: React.FC = () => {
           <Option value="REJECTED">Từ chối</Option>
         </Select>
       </Space>
-
       <Table
         columns={columns}
         dataSource={data?.items || []}
@@ -213,7 +210,7 @@ const ApplicationList: React.FC = () => {
           pageSizeOptions: ['10', '20', '50'],
         }}
         onChange={handleTableChange}
-        scroll={{ x: 900 }}
+        scroll={{ x: 1000 }}
       />
     </div>
   );

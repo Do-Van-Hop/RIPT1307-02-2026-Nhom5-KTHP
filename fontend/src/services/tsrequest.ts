@@ -22,15 +22,24 @@ tsrequest.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
+    const detail = error.response?.data?.detail;
+
     if (status === 401) {
       message.error('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại.');
       useAuthStore.getState().logout();
       window.location.href = '/login';
     } else if (status === 403) {
-      message.error('Bạn không có quyền thực hiện hành động này.');
+      message.error(detail || 'Bạn không có quyền thực hiện hành động này.');
+    } else if (status === 400) {
+      message.error(detail || 'Dữ liệu gửi lên không hợp lệ.');
+    } else if (status === 404) {
+      message.error(detail || 'Không tìm thấy tài nguyên.');
     } else if (status === 500) {
       message.error('Lỗi máy chủ, vui lòng thử lại sau.');
+    } else {
+      message.error(detail || 'Có lỗi xảy ra, vui lòng thử lại.');
     }
+
     return Promise.reject(error);
   }
 );

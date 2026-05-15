@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface User {
   id: number;
@@ -16,34 +17,46 @@ interface AuthState {
   loadFromStorage: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  token: null,
-  isAuthenticated: false,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      token: null,
+      isAuthenticated: false,
 
-  login: (user, token) => {
-    localStorage.setItem('auth_token', token);
-    localStorage.setItem('auth_user', JSON.stringify(user));
-    set({ user, token, isAuthenticated: true });
-  },
+      login: (user, token) => {
+        set({ user, token, isAuthenticated: true });
+      },
 
-  register: (user, token) => {
-    localStorage.setItem('auth_token', token);
-    localStorage.setItem('auth_user', JSON.stringify(user));
-    set({ user, token, isAuthenticated: true });
-  },
+      register: (user, token) => {
+        set({ user, token, isAuthenticated: true });
+      },
 
-  logout: () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    set({ user: null, token: null, isAuthenticated: false });
-  },
+      logout: () => {
+        set({ user: null, token: null, isAuthenticated: false });
+      },
 
-  loadFromStorage: () => {
-    const token = localStorage.getItem('auth_token');
-    const user = localStorage.getItem('auth_user');
-    if (token && user) {
-      set({ token, user: JSON.parse(user), isAuthenticated: true });
+      loadFromStorage: () => {
+        const stored = localStorage.getItem('auth-storage');
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (parsed.state?.user && parsed.state?.token) {
+              set({
+                user: parsed.state.user,
+                token: parsed.state.token,
+                isAuthenticated: true,
+              });
+            }
+          } catch (e) {
+            console.error('Failed to load auth from storage', e);
+          }
+        }
+      },
+    }),
+    {
+      name: 'auth-storage',
+      storage: createJSONStorage(() => localStorage),
     }
-  },
-}));
+  )
+);

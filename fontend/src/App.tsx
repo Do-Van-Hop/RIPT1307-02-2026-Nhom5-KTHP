@@ -9,6 +9,7 @@ import Register from './pages/Register';
 import CandidateLayout from './layouts/CandidateLayout';
 import AdminLayout from './layouts/AdminLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import SchoolManagement from './pages/admin/SchoolManagement';
 import MajorManagement from './pages/admin/MajorManagement';
 import SubjectGroupManagement from './pages/admin/SubjectGroupManagement';
@@ -22,9 +23,17 @@ import NotFound from './pages/NotFound';
 import Forbidden from './pages/Forbidden';
 import Dashboard from './pages/admin/Dashboard';
 import Profile from './pages/candidate/Profile';
-import Results from './pages/candidate/Results'; 
+import Results from './pages/candidate/Results';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5,
+    },
+  },
+});
 
 const App: React.FC = () => {
   const loadFromStorage = useAuthStore((state) => state.loadFromStorage);
@@ -37,43 +46,45 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <ConfigProvider locale={viVN}>
         <BrowserRouter>
-          <Routes>
-            {/* Public */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+          <ErrorBoundary>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
 
-            {/* Candidate */}
-            <Route element={<ProtectedRoute allowedRoles={['candidate']} />}>
-              <Route path="/candidate" element={<CandidateLayout />}>
-                <Route index element={<Navigate to="applications" replace />} />
-                <Route path="applications" element={<MyApplications />} />
-                <Route path="applications/new" element={<ApplicationForm />} />
-                <Route path="applications/:id" element={<ApplicationDetail />} />
-                <Route path="applications/:id/edit" element={<ApplicationForm />} />
-                <Route path="results" element={<Results />} />
-                <Route path="profile" element={<Profile />} />   
+              {/* Candidate routes */}
+              <Route element={<ProtectedRoute allowedRoles={['candidate']} />}>
+                <Route path="/candidate" element={<CandidateLayout />}>
+                  <Route index element={<Navigate to="applications" replace />} />
+                  <Route path="applications" element={<MyApplications />} />
+                  <Route path="applications/new" element={<ApplicationForm />} />
+                  <Route path="applications/:id" element={<ApplicationDetail />} />
+                  <Route path="applications/:id/edit" element={<ApplicationForm />} />
+                  <Route path="results" element={<Results />} />
+                  <Route path="profile" element={<Profile />} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* Admin */}
-            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<Navigate to="dashboard" replace />} />
-                <Route path="dashboard" element={<Dashboard />} />
-                <Route path="schools" element={<SchoolManagement />} />
-                <Route path="majors" element={<MajorManagement />} />
-                <Route path="subject-groups" element={<SubjectGroupManagement />} />
-                <Route path="applications" element={<AdminApplicationList />} />
-                <Route path="applications/:id" element={<AdminApplicationDetail />} />
-                <Route path="statistics" element={<Statistics />} />
+              {/* Admin routes */}
+              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="schools" element={<SchoolManagement />} />
+                  <Route path="majors" element={<MajorManagement />} />
+                  <Route path="subject-groups" element={<SubjectGroupManagement />} />
+                  <Route path="applications" element={<AdminApplicationList />} />
+                  <Route path="applications/:id" element={<AdminApplicationDetail />} />
+                  <Route path="statistics" element={<Statistics />} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* Redirect mặc định */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
-            <Route path="/forbidden" element={<Forbidden />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              {/* Fallback routes */}
+              <Route path="/forbidden" element={<Forbidden />} />
+              <Route path="/404" element={<NotFound />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </ErrorBoundary>
         </BrowserRouter>
       </ConfigProvider>
     </QueryClientProvider>
