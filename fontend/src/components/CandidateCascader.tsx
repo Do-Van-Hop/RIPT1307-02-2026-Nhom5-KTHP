@@ -1,16 +1,29 @@
-import React, { useState } from 'react';
-import { Select, Space, Spin } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Select, Space } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import * as catalogService from '../services/catalogService';
 import tsrequest from '../services/tsrequest';
 
 interface Props {
   onSelect: (schoolId: number, majorId: number, subjectGroupId: number) => void;
+  initialSchoolId?: number;
+  initialMajorId?: number;
+  initialSubjectGroupId?: number;
 }
 
-const CandidateCascader: React.FC<Props> = ({ onSelect }) => {
-  const [selectedSchool, setSelectedSchool] = useState<number | null>(null);
-  const [selectedMajor, setSelectedMajor] = useState<number | null>(null);
+const CandidateCascader: React.FC<Props> = ({
+  onSelect,
+  initialSchoolId,
+  initialMajorId,
+  initialSubjectGroupId,
+}) => {
+  const [selectedSchool, setSelectedSchool] = useState<number | null>(initialSchoolId || null);
+  const [selectedMajor, setSelectedMajor] = useState<number | null>(initialMajorId || null);
+
+  useEffect(() => {
+    if (initialSchoolId) setSelectedSchool(initialSchoolId);
+    if (initialMajorId) setSelectedMajor(initialMajorId);
+  }, [initialSchoolId, initialMajorId]);
 
   const { data: schools, isLoading: loadingSchools } = useQuery({
     queryKey: ['schools'],
@@ -30,17 +43,15 @@ const CandidateCascader: React.FC<Props> = ({ onSelect }) => {
     enabled: !!selectedSchool,
   });
 
-  const { data: majorDetail, isLoading: loadingDetail } = useQuery({
-    queryKey: ['majorDetail', selectedMajor],
+  const { data: subjectGroups, isLoading: loadingSubjectGroups } = useQuery({
+    queryKey: ['subjectGroupsByMajor', selectedMajor],
     queryFn: async () => {
-      if (!selectedMajor) return null;
-      const res = await tsrequest.get(`/majors/${selectedMajor}`);
+      if (!selectedMajor) return [];
+      const res = await catalogService.getSubjectGroupsByMajor(selectedMajor);
       return res.data;
     },
     enabled: !!selectedMajor,
   });
-
-  const subjectGroups = majorDetail?.subjectGroups || [];
 
   const handleSchoolChange = (value: number) => {
     setSelectedSchool(value);
@@ -57,32 +68,40 @@ const CandidateCascader: React.FC<Props> = ({ onSelect }) => {
     }
   };
 
+  const subjectGroupValue = initialSubjectGroupId && subjectGroups?.some((sg: any) => sg.id === initialSubjectGroupId)
+    ? initialSubjectGroupId
+    : undefined;
+
   return (
     <Space wrap>
       <Select
         placeholder="Chọn trường"
-        style={{ width: 200 }}
+        style={{ width: 220 }}
         options={schools?.map((s: any) => ({ value: s.id, label: s.name }))}
         onChange={handleSchoolChange}
         value={selectedSchool}
         loading={loadingSchools}
+        allowClear
       />
       <Select
         placeholder="Chọn ngành"
-        style={{ width: 200 }}
+        style={{ width: 220 }}
         options={majors?.map((m: any) => ({ value: m.id, label: m.name }))}
         onChange={handleMajorChange}
         value={selectedMajor}
         disabled={!selectedSchool}
         loading={loadingMajors}
+        allowClear
       />
       <Select
         placeholder="Chọn tổ hợp"
-        style={{ width: 200 }}
+        style={{ width: 220 }}
         options={subjectGroups?.map((sg: any) => ({ value: sg.id, label: sg.name }))}
         onChange={handleSubjectGroupChange}
         disabled={!selectedMajor}
-        loading={loadingDetail}
+        loading={loadingSubjectGroups}
+        allowClear
+        value={subjectGroupValue}
       />
     </Space>
   );
