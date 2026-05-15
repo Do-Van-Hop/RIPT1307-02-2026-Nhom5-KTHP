@@ -24,7 +24,7 @@ const ApplicationDetail: React.FC = () => {
     },
   });
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <div>Đang tải...</div>;
   if (!data) return <div>Không tìm thấy hồ sơ</div>;
 
   const statusInfo = statusMap[data.status] || { color: 'default', text: data.status };
@@ -41,31 +41,55 @@ const ApplicationDetail: React.FC = () => {
         </Space>
       }
     >
-      <Descriptions bordered column={1}>
-        <Descriptions.Item label="Trường">{data.school?.name}</Descriptions.Item>
-        <Descriptions.Item label="Ngành">{data.major?.name}</Descriptions.Item>
-        <Descriptions.Item label="Tổ hợp">{data.subjectGroup?.name}</Descriptions.Item>
+      <Descriptions bordered column={{ xs: 1, md: 2 }} style={{ marginBottom: 24 }}>
+        <Descriptions.Item label="Họ tên">{data.full_name}</Descriptions.Item>
+        <Descriptions.Item label="Số điện thoại">{data.phone}</Descriptions.Item>
+        <Descriptions.Item label="Ngày sinh">{new Date(data.dob).toLocaleDateString('vi-VN')}</Descriptions.Item>
+        <Descriptions.Item label="Số CCCD">{data.cccd_number}</Descriptions.Item>
+        <Descriptions.Item label="Trường">{data.school?.name || `ID: ${data.school_id}`}</Descriptions.Item>
+        <Descriptions.Item label="Ngành">{data.major?.name || `ID: ${data.major_id}`}</Descriptions.Item>
+        <Descriptions.Item label="Tổ hợp">{data.subjectGroup?.name || `ID: ${data.subject_group_id}`}</Descriptions.Item>
+        <Descriptions.Item label="Đối tượng ưu tiên">{data.priority}</Descriptions.Item>
         <Descriptions.Item label="Trạng thái">
           <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
         </Descriptions.Item>
-        <Descriptions.Item label="Đối tượng ưu tiên">{data.priority}</Descriptions.Item>
+        {data.submitted_at && (
+          <Descriptions.Item label="Ngày nộp">{new Date(data.submitted_at).toLocaleDateString('vi-VN')}</Descriptions.Item>
+        )}
         {data.scores && (
-          <Descriptions.Item label="Điểm">
+          <Descriptions.Item label="Điểm" span={2}>
             {Object.entries(data.scores).map(([subject, score]) => (
-              <div key={subject}>{subject}: {score as number}</div>
+              <div key={subject}>
+                {subject}: {score as number}
+              </div>
             ))}
           </Descriptions.Item>
         )}
-        {data.documents?.length > 0 && (
-          <Descriptions.Item label="Minh chứng">
-            <Space>
-              {data.documents.map((doc: { url: string }, idx: number) => (
-                <Image key={idx} src={doc.url} width={100} />
-              ))}
-            </Space>
+        {data.reject_reason && (
+          <Descriptions.Item label="Lý do từ chối" span={2}>
+            {data.reject_reason}
           </Descriptions.Item>
         )}
       </Descriptions>
+
+      {data.files && data.files.length > 0 && (
+        <>
+          <h4>Minh chứng đính kèm</h4>
+          <Space wrap>
+            {data.files.map((file: any, idx: number) => (
+              <div key={idx}>
+                {file.file_url.match(/\.(jpeg|jpg|gif|png)$/) ? (
+                  <Image src={file.file_url} width={120} alt={file.file_type} />
+                ) : (
+                  <a href={file.file_url} target="_blank" rel="noopener noreferrer">
+                    {file.file_type} - Xem file
+                  </a>
+                )}
+              </div>
+            ))}
+          </Space>
+        </>
+      )}
     </Card>
   );
 };

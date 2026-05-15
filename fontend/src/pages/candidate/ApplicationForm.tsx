@@ -10,18 +10,27 @@ import CandidateCascader from '../../components/CandidateCascader';
 
 const { Option } = Select;
 
+const priorityMap: Record<string, number> = {
+  KV1: 1,
+  KV2: 2,
+  'KV2-NT': 3,
+  KV3: 4,
+};
+
 const ApplicationForm: React.FC = () => {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
+
   const [selectedSchool, setSelectedSchool] = useState<number | null>(null);
   const [selectedMajor, setSelectedMajor] = useState<number | null>(null);
   const [selectedSubjectGroup, setSelectedSubjectGroup] = useState<number | null>(null);
-  
-  const [fileListHocBa, setFileListHocBa] = useState<any[]>([]);
-  const [fileListCccd, setFileListCccd] = useState<any[]>([]);
+
+  const [transcriptFiles, setTranscriptFiles] = useState<any[]>([]);
+  const [cccdFrontFiles, setCccdFrontFiles] = useState<any[]>([]);
+  const [cccdBackFiles, setCccdBackFiles] = useState<any[]>([]);
 
   const { data: existingApp, isLoading: loadingApp } = useQuery({
     queryKey: ['application', id],
@@ -36,31 +45,41 @@ const ApplicationForm: React.FC = () => {
   useEffect(() => {
     if (existingApp) {
       form.setFieldsValue({
-        fullName: existingApp.fullName,
+        fullName: existingApp.full_name,
         phone: existingApp.phone,
         dob: existingApp.dob ? dayjs(existingApp.dob) : null,
-        cccdNumber: existingApp.cccdNumber,
-        priority: existingApp.priority,
+        cccdNumber: existingApp.cccd_number,
+        priority: Object.keys(priorityMap).find(key => priorityMap[key] === existingApp.priority) || 'KV3',
         scores: existingApp.scores,
       });
-      setSelectedSchool(existingApp.schoolId);
-      setSelectedMajor(existingApp.majorId);
-      setSelectedSubjectGroup(existingApp.subjectGroupId);
+      setSelectedSchool(existingApp.school_id);
+      setSelectedMajor(existingApp.major_id);
+      setSelectedSubjectGroup(existingApp.subject_group_id);
 
-      const hocBaDocs = existingApp.documents?.filter((doc: any) => doc.name?.includes('Học bạ')) || [];
-      const cccdDocs = existingApp.documents?.filter((doc: any) => doc.name?.includes('CCCD')) || [];
-      
-      setFileListHocBa(hocBaDocs.map((doc: any, idx: number) => ({
-        uid: `hocba-${idx}`,
-        name: doc.name,
+      const files = existingApp.files || [];
+      const trans = files.filter((f: any) => f.file_type === 'TRANSCRIPT');
+      const front = files.filter((f: any) => f.file_type === 'CCCD_FRONT');
+      const back = files.filter((f: any) => f.file_type === 'CCCD_BACK');
+      setTranscriptFiles(trans.map((f: any, idx: number) => ({
+        uid: `trans-${idx}`,
+        name: f.file_url,
         status: 'done',
-        url: doc.url,
+        url: f.file_url,
+        file_type: f.file_type,
       })));
-      setFileListCccd(cccdDocs.map((doc: any, idx: number) => ({
-        uid: `cccd-${idx}`,
-        name: doc.name,
+      setCccdFrontFiles(front.map((f: any, idx: number) => ({
+        uid: `front-${idx}`,
+        name: f.file_url,
         status: 'done',
-        url: doc.url,
+        url: f.file_url,
+        file_type: f.file_type,
+      })));
+      setCccdBackFiles(back.map((f: any, idx: number) => ({
+        uid: `back-${idx}`,
+        name: f.file_url,
+        status: 'done',
+        url: f.file_url,
+        file_type: f.file_type,
       })));
     }
   }, [existingApp, form]);
@@ -75,7 +94,8 @@ const ApplicationForm: React.FC = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: unknown }) => applicationService.updateApplication(id, data),
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      applicationService.updateApplication(id, data),
     onSuccess: () => {
       message.success('Cập nhật hồ sơ thành công');
       queryClient.invalidateQueries({ queryKey: ['myApplications'] });
@@ -84,58 +104,115 @@ const ApplicationForm: React.FC = () => {
     },
   });
 
-  const handleUpload = async (file: File, type: 'hocba' | 'cccd') => {
+  const submitMutation = useMutation({
+    mutationFn: (applicationId: number) => applicationService.submitApplication(applicationId),
+    onSuccess: () => {
+      message.success('Nộp hồ sơ thành công');
+      queryClient.invalidateQueries({ queryKey: ['myApplications'] });
+      navigate('/candidate/applications');
+    },
+  });
+
+  const handleUpload = async (file: File, type: 'TRANSCRIPT' | 'CCCD_FRONT' | 'CCCD_BACK') => {
     try {
-      const res = await applicationService.uploadFile(file);
-      const url = res.data.url;
+      const res = await applicationService.uploadFile(file, type);
+      const url = res.data.file_url;
       const newFile = {
-        uid: `${type}-${file.name}-${Date.now()}`,
-        name: `${type === 'hocba' ? 'Học bạ' : 'CCCD'} - ${file.name}`,
+        uid: `${type}-${Date.now()}`,
+        name: file.name,
         status: 'done',
         url,
+        file_type: type,
       };
-      if (type === 'hocba') {
-        setFileListHocBa(prev => [...prev, newFile]);
-      } else {
-        setFileListCccd(prev => [...prev, newFile]);
-      }
+      if (type === 'TRANSCRIPT') setTranscriptFiles(prev => [...prev, newFile]);
+      if (type === 'CCCD_FRONT') setCccdFrontFiles(prev => [...prev, newFile]);
+      if (type === 'CCCD_BACK') setCccdBackFiles(prev => [...prev, newFile]);
       message.success('Tải lên thành công');
     } catch {
       message.error('Tải lên thất bại');
     }
+    return false;
   };
 
-  const handleSubmit = (values: any, status: 'DRAFT' | 'SUBMITTED') => {
-    const allDocuments = [
-      ...fileListHocBa.map(f => ({ url: f.url, name: f.name })),
-      ...fileListCccd.map(f => ({ url: f.url, name: f.name }))
-    ];
+  const buildFilesPayload = () => {
+    const allFiles = [...transcriptFiles, ...cccdFrontFiles, ...cccdBackFiles];
+    return allFiles.map(f => ({
+      file_url: f.url,
+      file_type: f.file_type,
+    }));
+  };
 
-    const payload = {
-      schoolId: selectedSchool,
-      majorId: selectedMajor,
-      subjectGroupId: selectedSubjectGroup,
-      fullName: values.fullName,
-      phone: values.phone,
-      dob: values.dob ? values.dob.toISOString() : null,
-      cccdNumber: values.cccdNumber,
-      scores: values.scores,
-      priority: values.priority,
-      documents: allDocuments,
-      status,
-    };
+  const calculateTotalScore = (scores: Record<string, number>) => {
+    return Object.values(scores).reduce((sum, val) => sum + val, 0);
+  };
 
-    if (isEdit && id) {
-      updateMutation.mutate({ id: Number(id), data: payload });
-    } else {
-      createMutation.mutate(payload);
+  const handleSaveDraft = async () => {
+    try {
+      const values = await form.validateFields();
+      const payload = {
+        school_id: selectedSchool,
+        major_id: selectedMajor,
+        subject_group_id: selectedSubjectGroup,
+        full_name: values.fullName,
+        dob: values.dob ? values.dob.format('YYYY-MM-DD') : null,
+        phone: values.phone,
+        cccd_number: values.cccdNumber,
+        score: values.scores ? calculateTotalScore(values.scores) : 0,
+        scores: values.scores,
+        priority: priorityMap[values.priority],
+        files: buildFilesPayload(),
+      };
+      if (isEdit && id) {
+        await updateMutation.mutateAsync({ id: Number(id), data: payload });
+      } else {
+        await createMutation.mutateAsync(payload);
+      }
+    } catch (err) {
+      console.error('Lưu nháp thất bại', err);
     }
   };
 
-  const onCascaderSelect = (schoolId: number, majorId: number, subjectGroupId: number) => {
-    setSelectedSchool(schoolId);
-    setSelectedMajor(majorId);
-    setSelectedSubjectGroup(subjectGroupId);
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      let applicationId = Number(id);
+      if (!isEdit) {
+        const payload = {
+          school_id: selectedSchool,
+          major_id: selectedMajor,
+          subject_group_id: selectedSubjectGroup,
+          full_name: values.fullName,
+          dob: values.dob ? values.dob.format('YYYY-MM-DD') : null,
+          phone: values.phone,
+          cccd_number: values.cccdNumber,
+          score: values.scores ? calculateTotalScore(values.scores) : 0,
+          scores: values.scores,
+          priority: priorityMap[values.priority],
+          files: buildFilesPayload(),
+        };
+        const res = await createMutation.mutateAsync(payload);
+        applicationId = res.data.id;
+      } else {
+        const payload = {
+          school_id: selectedSchool,
+          major_id: selectedMajor,
+          subject_group_id: selectedSubjectGroup,
+          full_name: values.fullName,
+          dob: values.dob ? values.dob.format('YYYY-MM-DD') : null,
+          phone: values.phone,
+          cccd_number: values.cccdNumber,
+          score: values.scores ? calculateTotalScore(values.scores) : 0,
+          scores: values.scores,
+          priority: priorityMap[values.priority],
+          files: buildFilesPayload(),
+        };
+        await updateMutation.mutateAsync({ id: Number(id), data: payload });
+        applicationId = Number(id);
+      }
+      await submitMutation.mutateAsync(applicationId);
+    } catch (err) {
+      console.error('Nộp hồ sơ thất bại', err);
+    }
   };
 
   const { data: subjectGroupDetail } = useQuery({
@@ -147,52 +224,44 @@ const ApplicationForm: React.FC = () => {
     },
     enabled: !!selectedSubjectGroup,
   });
-
   const subjects: string[] = subjectGroupDetail?.subjects || [];
 
-  if (loadingApp) return <div>Loading...</div>;
+  if (loadingApp) return <div>Đang tải...</div>;
 
   return (
     <Card title={isEdit ? 'Sửa hồ sơ' : 'Tạo hồ sơ mới'} style={{ maxWidth: 900, margin: '0 auto' }}>
-      <Form form={form} layout="vertical" onFinish={(values) => handleSubmit(values, 'SUBMITTED')}>
+      <Form form={form} layout="vertical">
         {/* Thông tin cá nhân */}
         <Card title="Thông tin cá nhân" size="small" style={{ marginBottom: 24 }}>
-          <Form.Item
-            name="fullName"
-            label="Họ và tên"
-            rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}
-          >
+          <Form.Item name="fullName" label="Họ và tên" rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}>
             <Input placeholder="Nguyễn Văn A" />
           </Form.Item>
-          <Form.Item
-            name="phone"
-            label="Số điện thoại"
-            rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
-          >
+          <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}>
             <Input placeholder="0123456789" />
           </Form.Item>
-          <Form.Item
-            name="dob"
-            label="Ngày sinh"
-            rules={[{ required: true, message: 'Vui lòng chọn ngày sinh' }]}
-          >
+          <Form.Item name="dob" label="Ngày sinh" rules={[{ required: true, message: 'Vui lòng chọn ngày sinh' }]}>
             <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} placeholder="Chọn ngày sinh" />
           </Form.Item>
-          <Form.Item
-            name="cccdNumber"
-            label="Số CCCD / CMND"
-            rules={[{ required: true, message: 'Vui lòng nhập số CCCD' }]}
-          >
+          <Form.Item name="cccdNumber" label="Số CCCD" rules={[{ required: true, message: 'Vui lòng nhập số CCCD' }]}>
             <Input placeholder="079123456789" />
           </Form.Item>
         </Card>
 
         {/* Chọn trường - ngành - tổ hợp */}
         <Form.Item label="Trường - Ngành - Tổ hợp" required>
-          <CandidateCascader onSelect={onCascaderSelect} />
+          <CandidateCascader
+            onSelect={(schoolId, majorId, subjectGroupId) => {
+              setSelectedSchool(schoolId);
+              setSelectedMajor(majorId);
+              setSelectedSubjectGroup(subjectGroupId);
+            }}
+            initialSchoolId={selectedSchool || undefined}
+            initialMajorId={selectedMajor || undefined}
+            initialSubjectGroupId={selectedSubjectGroup || undefined}
+          />
         </Form.Item>
 
-        {/* Điểm các môn theo tổ hợp */}
+        {/* Điểm các môn */}
         {subjects.length > 0 && (
           <Form.Item label="Điểm các môn" required>
             <Space wrap>
@@ -211,11 +280,7 @@ const ApplicationForm: React.FC = () => {
         )}
 
         {/* Đối tượng ưu tiên */}
-        <Form.Item
-          name="priority"
-          label="Đối tượng ưu tiên"
-          rules={[{ required: true, message: 'Chọn đối tượng ưu tiên' }]}
-        >
+        <Form.Item name="priority" label="Đối tượng ưu tiên" rules={[{ required: true }]}>
           <Select placeholder="Chọn đối tượng">
             <Option value="KV1">Khu vực 1</Option>
             <Option value="KV2">Khu vực 2</Option>
@@ -224,19 +289,16 @@ const ApplicationForm: React.FC = () => {
           </Select>
         </Form.Item>
 
-        {/* Upload học bạ */}
-        <Form.Item label="Học bạ (Ảnh chụp hoặc PDF)" required>
+        {/* Upload học bạ (TRANSCRIPT) */}
+        <Form.Item label="Học bạ (Ảnh hoặc PDF)" required>
           <Upload
             listType="picture-card"
-            fileList={fileListHocBa}
-            onRemove={(file) => setFileListHocBa(prev => prev.filter(f => f.uid !== file.uid))}
-            beforeUpload={(file) => {
-              handleUpload(file, 'hocba');
-              return false;
-            }}
+            fileList={transcriptFiles}
+            onRemove={(file) => setTranscriptFiles(prev => prev.filter(f => f.uid !== file.uid))}
+            beforeUpload={(file) => handleUpload(file, 'TRANSCRIPT')}
             accept="image/*,application/pdf"
           >
-            {fileListHocBa.length < 5 && (
+            {transcriptFiles.length < 5 && (
               <div>
                 <PlusOutlined />
                 <div style={{ marginTop: 8 }}>Tải lên</div>
@@ -246,38 +308,48 @@ const ApplicationForm: React.FC = () => {
           <div style={{ fontSize: 12, color: '#888' }}>Tối đa 5 file (học bạ, bảng điểm,...)</div>
         </Form.Item>
 
-        {/* Upload CCCD */}
-        <Form.Item label="Căn cước công dân (CCCD) - Mặt trước và sau" required>
+        {/* Upload CCCD mặt trước */}
+        <Form.Item label="CCCD mặt trước" required>
           <Upload
             listType="picture-card"
-            fileList={fileListCccd}
-            onRemove={(file) => setFileListCccd(prev => prev.filter(f => f.uid !== file.uid))}
-            beforeUpload={(file) => {
-              handleUpload(file, 'cccd');
-              return false;
-            }}
+            fileList={cccdFrontFiles}
+            onRemove={(file) => setCccdFrontFiles(prev => prev.filter(f => f.uid !== file.uid))}
+            beforeUpload={(file) => handleUpload(file, 'CCCD_FRONT')}
             accept="image/*,application/pdf"
           >
-            {fileListCccd.length < 2 && (
+            {cccdFrontFiles.length < 1 && (
               <div>
                 <PlusOutlined />
                 <div style={{ marginTop: 8 }}>Tải lên</div>
               </div>
             )}
           </Upload>
-          <div style={{ fontSize: 12, color: '#888' }}>Tối đa 2 file (mặt trước, mặt sau)</div>
         </Form.Item>
 
-        {/* Nút lưu */}
+        {/* Upload CCCD mặt sau */}
+        <Form.Item label="CCCD mặt sau" required>
+          <Upload
+            listType="picture-card"
+            fileList={cccdBackFiles}
+            onRemove={(file) => setCccdBackFiles(prev => prev.filter(f => f.uid !== file.uid))}
+            beforeUpload={(file) => handleUpload(file, 'CCCD_BACK')}
+            accept="image/*,application/pdf"
+          >
+            {cccdBackFiles.length < 1 && (
+              <div>
+                <PlusOutlined />
+                <div style={{ marginTop: 8 }}>Tải lên</div>
+              </div>
+            )}
+          </Upload>
+        </Form.Item>
+
+        {/* Buttons */}
         <Space>
-          <Button onClick={() => form.validateFields().then(values => handleSubmit(values, 'DRAFT'))}>
+          <Button onClick={handleSaveDraft} loading={createMutation.isPending || updateMutation.isPending}>
             Lưu nháp
           </Button>
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={createMutation.isPending || updateMutation.isPending}
-          >
+          <Button type="primary" onClick={handleSubmit} loading={submitMutation.isPending}>
             Nộp hồ sơ
           </Button>
         </Space>
