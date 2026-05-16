@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Select, Table, Button, Space, Modal, Form, Input, message, Popconfirm } from 'antd';
+import React, { useState, useEffect } from 'react';
+import {
+  Select, Table, Button, Space, Modal, Form, Input, message, Popconfirm, Tag
+} from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as catalogService from '../../services/catalogService';
@@ -10,11 +12,18 @@ interface Major {
   school_id: number;
 }
 
+interface SubjectGroup {
+  id: number;
+  name: string;
+  subjects: string[];
+}
+
 const MajorManagement: React.FC = () => {
   const [selectedSchoolId, setSelectedSchoolId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMajor, setEditingMajor] = useState<Major | null>(null);
   const [form] = Form.useForm();
+
   const queryClient = useQueryClient();
 
   const { data: schools } = useQuery({
@@ -32,26 +41,43 @@ const MajorManagement: React.FC = () => {
     enabled: !!selectedSchoolId,
   });
 
-  const { data: subjectGroups } = useQuery({
+  const { data: allSubjectGroups } = useQuery({
     queryKey: ['subjectGroups'],
-    queryFn: async () => (await catalogService.getSubjectGroups()).data,
+    queryFn: async () => (await catalogService.getSubjectGroups()).data as SubjectGroup[],
   });
+
+  const { data: currentGroups, refetch: refetchCurrentGroups } = useQuery({
+    queryKey: ['majorSubjectGroups', editingMajor?.id],
+    queryFn: async () => {
+      if (!editingMajor) return [];
+      const res = await catalogService.getSubjectGroupsByMajor(editingMajor.id);
+      return res.data as SubjectGroup[];
+    },
+    enabled: !!editingMajor,
+  });
+
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (currentGroups) {
+      setSelectedGroupIds(currentGroups.map(g => g.id));
+    }
+  }, [currentGroups]);
 
   const createMutation = useMutation({
     mutationFn: catalogService.createMajor,
     onSuccess: (newMajor) => {
-      const subjectGroupIds = form.getFieldValue('subjectGroupIds') || [];
-      if (subjectGroupIds.length === 0) {
+      const groupIds = form.getFieldValue('subjectGroupIds') || [];
+      if (groupIds.length === 0) {
         queryClient.invalidateQueries({ queryKey: ['majors', selectedSchoolId] });
         message.success('Thêm ngành thành công (chưa gán tổ hợp)');
         setIsModalOpen(false);
         form.resetFields();
         return;
       }
-      const assignPromises = subjectGroupIds.map((groupId: number) =>
+      Promise.all(groupIds.map((groupId: number) =>
         catalogService.assignSubjectGroupToMajor(newMajor.data.id, groupId)
-      );
-      Promise.all(assignPromises)
+      ))
         .then(() => {
           queryClient.invalidateQueries({ queryKey: ['majors', selectedSchoolId] });
           message.success('Thêm ngành và gán tổ hợp thành công');
@@ -68,22 +94,54 @@ const MajorManagement: React.FC = () => {
       catalogService.updateMajor(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['majors', selectedSchoolId] });
-      message.success('Cập nhật ngành thành công');
-      setIsModalOpen(false);
-      setEditingMajor(null);
-      form.resetFields();
+      message.success('Cập nhật thông tin ngành thành công');
     },
     onError: (err: any) => message.error(err.response?.data?.detail || 'Lỗi cập nhật'),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: catalogService.deleteMajor,
+  const assignGroupMutation = useMutation({
+    mutationFn: ({ majorId, groupId }: { majorId: number; groupId: number }) =>
+      catalogService.assignSubjectGroupToMajor(majorId, groupId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['majors', selectedSchoolId] });
-      message.success('Xóa ngành thành công');
+      refetchCurrentGroups(); // Cập nhật danh sách tổ hợp hiện tại
+      message.success('Đã thêm tổ hợp vào ngành');
     },
-    onError: (err: any) => message.error(err.response?.data?.detail || 'Lỗi xóa ngành'),
+    onError: (err: any) => {
+      message.error(err.response?.data?.detail || 'Thêm tổ hợp thất bại');
+    },
   });
+
+  const removeGroupMutation = useMutation({
+    mutationFn: ({ majorId, groupId }: { majorId: number; groupId: number }) =>
+      catalogService.removeSubjectGroupFromMajor(majorId, groupId),
+    onSuccess: () => {
+      refetchCurrentGroups();
+      message.success('Đã xoá tổ hợp khỏi ngành');
+    },
+    onError: (err: any) => {
+      if (err.response?.status === 404) {
+        message.error('Backend chưa có API xoá tổ hợp khỏi ngành. Vui lòng liên hệ developer để bổ sung.');
+      } else {
+        message.error(err.response?.data?.detail || 'Xoá tổ hợp thất bại');
+      }
+    },
+  });
+
+  const handleGroupChange = (values: number[]) => {
+    if (!editingMajor) return;
+
+    const added = values.filter(v => !selectedGroupIds.includes(v));
+    const removed = selectedGroupIds.filter(v => !values.includes(v));
+
+    added.forEach(groupId => {
+      assignGroupMutation.mutate({ majorId: editingMajor.id, groupId });
+    });
+    removed.forEach(groupId => {
+      removeGroupMutation.mutate({ majorId: editingMajor.id, groupId });
+    });
+
+    setSelectedGroupIds(values);
+  };
 
   const handleAdd = () => {
     setEditingMajor(null);
@@ -94,22 +152,47 @@ const MajorManagement: React.FC = () => {
 
   const handleEdit = (record: Major) => {
     setEditingMajor(record);
-    form.setFieldsValue({ name: record.name, schoolId: record.school_id });
+    form.setFieldsValue({
+      name: record.name,
+      schoolId: record.school_id,
+    });
     setIsModalOpen(true);
+  };
+
+  const handleCancelModal = () => {
+    setIsModalOpen(false);
+    setEditingMajor(null);
+    form.resetFields();
+    setSelectedGroupIds([]);
   };
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
       if (editingMajor) {
-        await updateMutation.mutateAsync({ id: editingMajor.id, data: { name: values.name, schoolId: values.schoolId } });
+        await updateMutation.mutateAsync({
+          id: editingMajor.id,
+          data: { name: values.name, schoolId: values.schoolId }
+        });
+        setIsModalOpen(false);
+        setEditingMajor(null);
+        form.resetFields();
       } else {
         await createMutation.mutateAsync({ name: values.name, schoolId: selectedSchoolId! });
       }
     } catch (err) {
-      // validation error or mutation error
+      // validation error hoặc mutation error đã được xử lý
     }
   };
+
+  const deleteMutation = useMutation({
+    mutationFn: catalogService.deleteMajor,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['majors', selectedSchoolId] });
+      message.success('Xoá ngành thành công');
+    },
+    onError: (err: any) => message.error(err.response?.data?.detail || 'Lỗi xoá ngành'),
+  });
 
   const columns = [
     { title: 'Tên ngành', dataIndex: 'name', key: 'name' },
@@ -118,14 +201,16 @@ const MajorManagement: React.FC = () => {
       key: 'action',
       render: (_: any, record: Major) => (
         <Space>
-          <Button icon={<EditOutlined />} size="small" onClick={() => handleEdit(record)}>Sửa</Button>
+          <Button icon={<EditOutlined />} size="small" onClick={() => handleEdit(record)}>
+            Sửa
+          </Button>
           <Popconfirm
-            title="Xóa ngành này sẽ xóa tất cả mapping tổ hợp và không thể khôi phục. Tiếp tục?"
+            title="Xoá ngành này sẽ xoá tất cả mapping tổ hợp và không thể khôi phục. Tiếp tục?"
             onConfirm={() => deleteMutation.mutate(record.id)}
-            okText="Xóa"
+            okText="Xoá"
             cancelText="Hủy"
           >
-            <Button icon={<DeleteOutlined />} size="small" danger>Xóa</Button>
+            <Button icon={<DeleteOutlined />} size="small" danger>Xoá</Button>
           </Popconfirm>
         </Space>
       ),
@@ -150,35 +235,55 @@ const MajorManagement: React.FC = () => {
           </Button>
         </div>
       </div>
+
       <Table dataSource={majors} columns={columns} rowKey="id" loading={isLoading} pagination={{ pageSize: 10 }} />
+
+      {/* Modal thêm / sửa ngành */}
       <Modal
         title={editingMajor ? 'Sửa ngành' : 'Thêm ngành mới'}
         open={isModalOpen}
         onOk={handleSubmit}
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={handleCancelModal}
         confirmLoading={createMutation.isPending || updateMutation.isPending}
         width={600}
+        okText={editingMajor ? 'Cập nhật' : 'Thêm'}
+        cancelText="Hủy"
       >
         <Form form={form} layout="vertical">
           <Form.Item name="name" label="Tên ngành" rules={[{ required: true, message: 'Vui lòng nhập tên ngành' }]}>
             <Input />
           </Form.Item>
+
           {editingMajor ? (
-            <Form.Item name="schoolId" label="Trường" rules={[{ required: true }]}>
-              <Select
-                options={schools?.map((s: any) => ({ value: s.id, label: s.name }))}
-                placeholder="Chọn trường"
-              />
-            </Form.Item>
+            <>
+              <Form.Item name="schoolId" label="Trường" rules={[{ required: true }]}>
+                <Select options={schools?.map((s: any) => ({ value: s.id, label: s.name }))} placeholder="Chọn trường" />
+              </Form.Item>
+
+              {/* Phần quản lý tổ hợp môn */}
+              <Form.Item label="Tổ hợp xét tuyển">
+                <Select
+                  mode="multiple"
+                  placeholder="Chọn tổ hợp môn"
+                  value={selectedGroupIds}
+                  onChange={handleGroupChange}
+                  loading={assignGroupMutation.isPending || removeGroupMutation.isPending}
+                  options={allSubjectGroups?.map(sg => ({ value: sg.id, label: `${sg.name} (${sg.subjects.join(', ')})` }))}
+                />
+                <div style={{ fontSize: 12, color: '#888', marginTop: 8 }}>
+                  * Thêm: chọn tổ hợp mới. Xoá: bỏ chọn tổ hợp đang có.
+                  {removeGroupMutation.isError && (
+                    <span style={{ color: 'red', display: 'block' }}>
+                      Lưu ý: Backend chưa hỗ trợ xoá tổ hợp. Vui lòng liên hệ developer.
+                    </span>
+                  )}
+                </div>
+              </Form.Item>
+            </>
           ) : (
             <Form.Item name="subjectGroupIds" label="Tổ hợp xét tuyển (chọn nhiều)" rules={[{ required: true, message: 'Chọn ít nhất một tổ hợp' }]}>
-              <Select mode="multiple" placeholder="Chọn tổ hợp" options={subjectGroups?.map((sg: any) => ({ value: sg.id, label: sg.name }))} />
+              <Select mode="multiple" placeholder="Chọn tổ hợp" options={allSubjectGroups?.map(sg => ({ value: sg.id, label: sg.name }))} />
             </Form.Item>
-          )}
-          {editingMajor && (
-            <div style={{ color: 'gray', marginTop: 8 }}>
-              Lưu ý: Để thay đổi tổ hợp môn, hãy xóa ngành và tạo lại hoặc dùng tính năng gán tổ hợp riêng (chưa có trên UI).
-            </div>
           )}
         </Form>
       </Modal>

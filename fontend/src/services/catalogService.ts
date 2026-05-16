@@ -29,7 +29,8 @@ export const assignSubjectGroupToMajor = (majorId: number, groupId: number) =>
 
 export const getSubjectGroupsByMajor = (majorId: number) =>
   tsrequest.get(`/majors/${majorId}/subject-groups`);
-
+export const removeSubjectGroupFromMajor = (majorId: number, groupId: number) =>
+  tsrequest.delete(`/majors/${majorId}/remove-group/${groupId}`);
 export const getSubjectGroups = () => tsrequest.get('/subject-groups/');
 
 export const getSubjectGroupById = (id: number) => tsrequest.get(`/subject-groups/${id}`);

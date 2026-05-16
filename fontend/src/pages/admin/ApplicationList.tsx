@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import * as applicationService from '../../services/applicationService';
 import * as catalogService from '../../services/catalogService';
+import { useAllMajors } from '../../hooks/useAllMajors';
 
 const { Option } = Select;
 
@@ -33,7 +34,17 @@ const ApplicationList: React.FC = () => {
     staleTime: 60000,
   });
 
-  const { data: majors } = useQuery({
+  const { data: allMajorsData } = useAllMajors();
+  const majorMap = allMajorsData?.map || new Map();
+
+  const { data: subjectGroups } = useQuery({
+    queryKey: ['subjectGroups'],
+    queryFn: async () => (await catalogService.getSubjectGroups()).data,
+    staleTime: 60000,
+  });
+  const subjectGroupMap = new Map(subjectGroups?.map((sg: any) => [sg.id, sg.name]));
+
+  const { data: majorsBySchool } = useQuery({
     queryKey: ['majors', filters.schoolId],
     queryFn: async () => {
       if (!filters.schoolId) return [];
@@ -91,11 +102,17 @@ const ApplicationList: React.FC = () => {
       dataIndex: 'major_id',
       key: 'major_id',
       render: (majorId: number) => {
-        const major = majors?.find((m: any) => m.id === majorId);
-        return major?.name || `ID: ${majorId}`;
+        return majorMap.get(majorId) || `ID: ${majorId}`;
       },
     },
-    { title: 'Tổ hợp ID', dataIndex: 'subject_group_id', key: 'subject_group_id' },
+    {
+      title: 'Tổ hợp',
+      dataIndex: 'subject_group_id',
+      key: 'subject_group_id',
+      render: (groupId: number) => {
+        return subjectGroupMap.get(groupId) || `ID: ${groupId}`;
+      },
+    },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
@@ -179,7 +196,7 @@ const ApplicationList: React.FC = () => {
           disabled={!filters.schoolId}
           onChange={(value) => setFilters({ ...filters, majorId: value, page: 1 })}
         >
-          {majors?.map((m: any) => (
+          {majorsBySchool?.map((m: any) => (
             <Option key={m.id} value={m.id}>{m.name}</Option>
           ))}
         </Select>

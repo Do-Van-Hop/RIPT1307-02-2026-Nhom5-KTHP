@@ -9,6 +9,8 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { Column } from '@ant-design/charts';
 import * as applicationService from '../../services/applicationService';
+import { useAllMajors } from '../../hooks/useAllMajors';
+import * as catalogService from '../../services/catalogService';
 
 const { Title } = Typography;
 
@@ -44,6 +46,19 @@ const Dashboard: React.FC = () => {
       return res.data?.items || [];
     },
   });
+  const { data: allMajorsData } = useAllMajors();
+  const majorMap = allMajorsData?.map || new Map();
+
+  const { data: subjectGroups } = useQuery({
+    queryKey: ['subjectGroups'],
+    queryFn: async () => (await catalogService.getSubjectGroups()).data,
+  });
+  const subjectGroupMap = new Map(subjectGroups?.map((sg: any) => [sg.id, sg.name]));
+
+  const { data: schoolsData } = useQuery({
+    queryKey: ['schools'],
+    queryFn: async () => (await catalogService.getSchools()).data,
+  });
 
   const totalApplications = stats?.byStatus?.reduce((sum: number, item: any) => sum + item.total, 0) || 0;
   const pendingCount = stats?.byStatus?.find((item: any) => item.status === 'PENDING')?.total || 0;
@@ -58,8 +73,27 @@ const Dashboard: React.FC = () => {
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 70 },
     { title: 'Thí sinh ID', dataIndex: 'user_id', key: 'user_id' },
-    { title: 'Trường ID', dataIndex: 'school_id', key: 'school_id' },
-    { title: 'Ngành ID', dataIndex: 'major_id', key: 'major_id' },
+    {
+      title: 'Trường',
+      dataIndex: 'school_id',
+      key: 'school_id',
+      render: (id: number) => {
+        const school = schoolsData?.find((s: any) => s.id === id);
+        return school?.name || `ID: ${id}`;
+      }
+    },
+    {
+      title: 'Ngành',
+      dataIndex: 'major_id',
+      key: 'major_id',
+      render: (id: number) => majorMap.get(id) || `ID: ${id}`
+    },
+    {
+      title: 'Tổ hợp',
+      dataIndex: 'subject_group_id',
+      key: 'subject_group_id',
+      render: (id: number) => subjectGroupMap.get(id) || `ID: ${id}`
+    },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
@@ -136,7 +170,7 @@ const Dashboard: React.FC = () => {
                 data={schoolChartData}
                 xField="schoolName"
                 yField="count"
-                label={{ position: 'top', style: { fill: '#000' } }}
+                label={{ position: 'top', style: { fontSize: 12, angle: 0 }, autoRotate: false, autoHide: false, rotate: -20 }}
                 xAxis={{ label: { autoRotate: true, autoHide: true } }}
                 meta={{ count: { alias: 'Số lượng hồ sơ' } }}
               />
