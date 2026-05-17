@@ -100,7 +100,23 @@ def create_application(
 
     db.commit()
 
-    return app
+    return {
+        "id": app.id,
+
+        "full_name": app.full_name,
+
+        "status": app.status,
+
+        "cccd_number": app.cccd_number,
+
+        "major_name": app.major.name,
+
+        "score": app.score,
+
+        "scores": app.scores,
+
+        "submitted_at": app.submitted_at
+    }
 
 @router.get("/my")
 def get_my_applications(
@@ -220,7 +236,37 @@ def get_application_detail(
             detail="Permission denied"
         )
 
-    return app
+    return {
+        "id": app.id,
+
+        "school_id": app.school_id,
+
+        "major_id": app.major_id,
+
+        "major_name": app.major.name,
+
+        "subject_group_id": app.subject_group_id,
+
+        "full_name": app.full_name,
+
+        "dob": app.dob,
+
+        "phone": app.phone,
+
+        "cccd_number": app.cccd_number,
+
+        "score": app.score,
+
+        "scores": app.scores,
+
+        "priority": app.priority,
+
+        "status": app.status,
+
+        "submitted_at": app.submitted_at,
+
+        "files": app.files
+    }
 
 @router.put(
     "/{app_id}",
@@ -305,7 +351,23 @@ def update_application(
 
     db.refresh(app)
 
-    return app
+    return {
+        "id": app.id,
+
+        "full_name": app.full_name,
+
+        "status": app.status,
+
+        "cccd_number": app.cccd_number,
+
+        "major_name": app.major.name,
+
+        "score": app.score,
+
+        "scores": app.scores,
+
+        "submitted_at": app.submitted_at
+    }
 
 @router.delete("/{app_id}")
 def delete_application(
@@ -405,7 +467,7 @@ def update_application_status(
     user = db.query(User).filter(
         User.id == app.user_id
     ).first()
-
+    # Gửi email thông báo kết quả hồ sơ
     try:
 
         if new_status == ApplicationStatus.APPROVED:

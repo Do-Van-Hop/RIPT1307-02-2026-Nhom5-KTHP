@@ -126,10 +126,6 @@ CREATE TABLE files (
         ON DELETE CASCADE
 );
 
--- ============================================
--- CẬP NHẬT CÁC TRƯỜNG CÒN THIẾU
--- ============================================
-
 -- 1. Thêm cột subjects (JSON) vào bảng subject_groups
 ALTER TABLE subject_groups
 ADD COLUMN subjects JSON NOT NULL;

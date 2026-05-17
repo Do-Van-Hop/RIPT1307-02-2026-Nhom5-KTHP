@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.deps import require_admin
@@ -62,6 +62,19 @@ def assign_group(
     return {"message": "Assigned successfully"}
 
 # Lấy danh sách ngành theo trường
+@router.get("/", response_model=list[MajorResponse])
+def get_majors(
+    school_id: int | None = Query(default=None),
+    schoolId: int | None = Query(default=None),
+    db: Session = Depends(get_db)
+):
+    selected_school_id = school_id or schoolId
+    query = db.query(Major)
+
+    if selected_school_id:
+        query = query.filter(Major.school_id == selected_school_id)
+    return query.all()
+
 @router.get("/by-school/{school_id}", response_model=list[MajorResponse])
 def get_majors_by_school(school_id: int, db: Session = Depends(get_db)):
     return db.query(Major).filter(Major.school_id == school_id).all()
@@ -169,4 +182,31 @@ def delete_major(
 
     return {
         "message": "Major deleted successfully"
+    }
+
+@router.delete("/{major_id}/remove-group/{group_id}")
+def remove_group(
+    major_id: int,
+    group_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin)
+):
+
+    mapping = db.query(MajorSubjectGroup).filter(
+        MajorSubjectGroup.major_id == major_id,
+        MajorSubjectGroup.subject_group_id == group_id
+    ).first()
+
+    if not mapping:
+        raise HTTPException(
+            status_code=404,
+            detail="Mapping not found"
+        )
+
+    db.delete(mapping)
+
+    db.commit()
+
+    return {
+        "message": "Subject group removed from major"
     }
