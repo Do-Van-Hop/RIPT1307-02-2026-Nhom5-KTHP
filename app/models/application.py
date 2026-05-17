@@ -21,6 +21,7 @@ class Application(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     school_id = Column(Integer, ForeignKey("schools.id"))
     major_id = Column(Integer, ForeignKey("majors.id"))
+    major = relationship("Major")
     subject_group_id = Column(Integer, ForeignKey("subject_groups.id"))
 
     full_name = Column(String(255))

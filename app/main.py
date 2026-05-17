@@ -18,10 +18,6 @@ app.include_router(subject_group.router)
 app.include_router(file.router)
 app.include_router(stats.router)
 
-@app.get("/favicon.ico")
-def favicon():
-    return FileResponse("favicon.ico")
-
 @app.get("/")
 def root():
     return {"message": "Admission System API running "}

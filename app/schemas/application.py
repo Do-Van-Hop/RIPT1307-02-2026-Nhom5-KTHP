@@ -26,12 +26,14 @@ class ApplicationResponse(BaseModel):
     cccd_number: str
     scores: dict[str, float]
     submitted_at: datetime | None = None
+    major_name: str
 
 class ApplicationDetailResponse(BaseModel):
 
     id: int
     school_id: int
     major_id: int
+    major_name: str
     subject_group_id: int
     full_name: str
     dob: date
