@@ -60,8 +60,11 @@ const MajorManagement: React.FC = () => {
 
   useEffect(() => {
     if (currentGroups) {
-      setSelectedGroupIds(currentGroups.map(g => g.id));
+      const ids = currentGroups.map(g => g.id);
+      const t = setTimeout(() => setSelectedGroupIds(ids), 0);
+      return () => clearTimeout(t);
     }
+    return;
   }, [currentGroups]);
 
   const createMutation = useMutation({
@@ -86,17 +89,29 @@ const MajorManagement: React.FC = () => {
         })
         .catch(() => message.error('Lỗi khi gán tổ hợp, vui lòng thử lại'));
     },
-    onError: (err: any) => message.error(err.response?.data?.detail || 'Lỗi khi tạo ngành'),
+    onError: (err: any) => {
+      // Lấy message lỗi từ response (nếu có)
+      const errorMessage = err.response?.data?.detail 
+        || err.response?.data?.message 
+        || (typeof err === 'string' ? err : 'Lỗi khi tạo ngành');
+      message.error(errorMessage);
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { name: string; schoolId: number } }) =>
+    mutationFn: ({ id, data }: { id: number; data: { name: string; school_id: number } }) =>
       catalogService.updateMajor(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['majors', selectedSchoolId] });
       message.success('Cập nhật thông tin ngành thành công');
     },
-    onError: (err: any) => message.error(err.response?.data?.detail || 'Lỗi cập nhật'),
+    onError: (err: any) => {
+      // Lấy message lỗi từ response (nếu có)
+      const errorMessage = err.response?.data?.detail 
+        || err.response?.data?.message 
+        || (typeof err === 'string' ? err : 'Lỗi khi sửa ngành');
+      message.error(errorMessage);
+    },
   });
 
   const assignGroupMutation = useMutation({
@@ -172,13 +187,13 @@ const MajorManagement: React.FC = () => {
       if (editingMajor) {
         await updateMutation.mutateAsync({
           id: editingMajor.id,
-          data: { name: values.name, schoolId: values.schoolId }
+          data: { name: values.name, school_id: values.schoolId }
         });
         setIsModalOpen(false);
         setEditingMajor(null);
         form.resetFields();
       } else {
-        await createMutation.mutateAsync({ name: values.name, schoolId: selectedSchoolId! });
+        await createMutation.mutateAsync({ name: values.name, school_id: selectedSchoolId! });
       }
     } catch (err) {
       // validation error hoặc mutation error đã được xử lý
@@ -191,7 +206,13 @@ const MajorManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['majors', selectedSchoolId] });
       message.success('Xoá ngành thành công');
     },
-    onError: (err: any) => message.error(err.response?.data?.detail || 'Lỗi xoá ngành'),
+    onError: (err: any) => {
+      // Lấy message lỗi từ response (nếu có)
+      const errorMessage = err.response?.data?.detail 
+        || err.response?.data?.message 
+        || (typeof err === 'string' ? err : 'Lỗi khi tạo ngành');
+      message.error(errorMessage);
+    },
   });
 
   const columns = [

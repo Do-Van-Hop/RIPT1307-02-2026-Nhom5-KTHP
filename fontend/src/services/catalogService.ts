@@ -16,10 +16,10 @@ export const getMajorsBySchool = (schoolId: number) =>
 
 export const getMajorById = (id: number) => tsrequest.get(`/majors/${id}`);
 
-export const createMajor = (data: { name: string; schoolId: number }) =>
+export const createMajor = (data: { name: string; school_id: number }) =>
   tsrequest.post('/majors/', data);
 
-export const updateMajor = (id: number, data: { name: string; schoolId: number }) =>
+export const updateMajor = (id: number, data: { name: string; school_id: number }) =>
   tsrequest.put(`/majors/${id}`, data);
 
 export const deleteMajor = (id: number) => tsrequest.delete(`/majors/${id}`);

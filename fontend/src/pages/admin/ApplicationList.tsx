@@ -69,11 +69,27 @@ const ApplicationList: React.FC = () => {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) =>
-      applicationService.updateApplicationStatus(id, status),
-    onSuccess: () => {
+    mutationFn: ({ id, status, reason }: { id: number; status: string; reason?: string }) =>
+      applicationService.updateApplicationStatus(id, status, reason),
+    onSuccess: async (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminApplications'] });
       message.success('Cập nhật trạng thái thành công');
+
+      const subject = variables.status === 'APPROVED'
+        ? 'Hồ sơ xét tuyển đã được duyệt'
+        : 'Hồ sơ xét tuyển bị từ chối';
+
+      const body = variables.status === 'APPROVED'
+        ? `Chúc mừng! Hồ sơ #${variables.id} của bạn đã được duyệt.\nVui lòng theo dõi các bước tiếp theo.`
+        : `Rất tiếc, hồ sơ #${variables.id} của bạn đã bị từ chối.\nLý do: ${variables.reason || 'Không có lý do cụ thể'}\nLiên hệ phòng tuyển sinh nếu cần giải đáp.`;
+
+      try {
+        await applicationService.sendApplicationEmail(variables.id, subject, body);
+        message.success('📧 Đã gửi email thông báo cho thí sinh');
+      } catch (emailError) {
+        console.error('Gửi email thất bại', emailError);
+        message.warning('⚠️ Cập nhật trạng thái thành công nhưng không thể gửi email. Vui lòng kiểm tra cấu hình email.');
+      }
     },
     onError: (err: any) => {
       message.error(err.response?.data?.detail || 'Lỗi khi cập nhật trạng thái');
@@ -83,10 +99,10 @@ const ApplicationList: React.FC = () => {
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 70 },
     {
-      title: 'Thí sinh (ID)',
-      dataIndex: 'user_id',
-      key: 'user_id',
-      render: (userId: number) => userId || 'N/A',
+      title: 'Họ tên thí sinh',
+      dataIndex: 'full_name',
+      key: 'full_name',
+      render: (fullName: string) => fullName || 'N/A',
     },
     {
       title: 'Trường',
@@ -145,20 +161,16 @@ const ApplicationList: React.FC = () => {
               <Popconfirm
                 title="Duyệt hồ sơ này?"
                 onConfirm={() => updateStatusMutation.mutate({ id: record.id, status: 'APPROVED' })}
-                okText="Duyệt"
-                cancelText="Hủy"
               >
-                <Button icon={<CheckOutlined />} size="small" type="primary" loading={updateStatusMutation.isPending}>
+                <Button icon={<CheckOutlined />} size="small" type="primary">
                   Duyệt
                 </Button>
               </Popconfirm>
               <Popconfirm
                 title="Từ chối hồ sơ này?"
-                onConfirm={() => updateStatusMutation.mutate({ id: record.id, status: 'REJECTED' })}
-                okText="Từ chối"
-                cancelText="Hủy"
+                onConfirm={() => updateStatusMutation.mutate({ id: record.id, status: 'REJECTED', reason: '' })}
               >
-                <Button icon={<CloseOutlined />} size="small" danger loading={updateStatusMutation.isPending}>
+                <Button icon={<CloseOutlined />} size="small" danger>
                   Từ chối
                 </Button>
               </Popconfirm>

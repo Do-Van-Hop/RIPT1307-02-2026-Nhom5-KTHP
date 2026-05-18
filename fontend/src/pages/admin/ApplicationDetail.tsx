@@ -28,20 +28,42 @@ const AdminApplicationDetail: React.FC = () => {
     enabled: !!id,
   });
 
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ status, reason }: { status: string; reason?: string }) =>
-      applicationService.updateApplicationStatus(Number(id), status, reason),
-    onSuccess: () => {
-      message.success('Cập nhật trạng thái thành công');
-      queryClient.invalidateQueries({ queryKey: ['adminApplication', Number(id)] });
-      queryClient.invalidateQueries({ queryKey: ['adminApplications'] });
-      setRejectModalOpen(false);
-      setRejectReason('');
-    },
-    onError: (err: any) => {
-      message.error(err.response?.data?.detail || 'Lỗi cập nhật');
-    },
-  });
+const updateStatusMutation = useMutation({
+  mutationFn: ({ status, reason }: { status: string; reason?: string }) =>
+    applicationService.updateApplicationStatus(Number(id), status, reason),
+  onSuccess: async (_, variables) => {
+    message.success('Cập nhật trạng thái thành công');
+    queryClient.invalidateQueries({ queryKey: ['adminApplication', Number(id)] });
+    queryClient.invalidateQueries({ queryKey: ['adminApplications'] });
+    setRejectModalOpen(false);
+    setRejectReason('');
+
+    // Gửi email thông báo
+    const subject = variables.status === 'APPROVED'
+      ? 'Hồ sơ xét tuyển đã được duyệt'
+      : 'Hồ sơ xét tuyển bị từ chối';
+
+    let body = '';
+    if (variables.status === 'APPROVED') {
+      body = `Chúc mừng! Hồ sơ #${id} của bạn đã được duyệt.\nVui lòng theo dõi các bước tiếp theo.`;
+    } else {
+      const reason = variables.reason || 'Không có lý do cụ thể';
+      body = `Rất tiếc, hồ sơ #${id} của bạn đã bị từ chối.\nLý do: ${reason}\nLiên hệ phòng tuyển sinh nếu cần giải đáp.`;
+    }
+
+    try {
+      await applicationService.sendApplicationEmail(Number(id), subject, body);
+      message.success('📧 Đã gửi email thông báo cho thí sinh');
+    } catch (emailError) {
+      console.error('Gửi email thất bại', emailError);
+      message.warning('⚠️ Cập nhật trạng thái thành công nhưng không thể gửi email. Vui lòng kiểm tra lại cấu hình email.');
+    }
+  },
+  onError: (err: any) => {
+    message.error(err.response?.data?.detail || 'Lỗi cập nhật');
+  },
+});
+
 
   const handleApprove = () => updateStatusMutation.mutate({ status: 'APPROVED' });
   const handleRejectConfirm = () => {

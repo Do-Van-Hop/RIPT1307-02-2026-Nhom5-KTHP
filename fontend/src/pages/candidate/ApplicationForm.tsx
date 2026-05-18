@@ -210,6 +210,16 @@ const ApplicationForm: React.FC = () => {
         applicationId = Number(id);
       }
       await submitMutation.mutateAsync(applicationId);
+      try {
+        await applicationService.sendApplicationEmail(
+          applicationId,
+          'Xác nhận nộp hồ sơ xét tuyển',
+          `Chúc mừng bạn đã nộp hồ sơ xét tuyển thành công.\nMã hồ sơ: ${applicationId}\nTrạng thái: Chờ duyệt.\nChúng tôi sẽ thông báo kết quả sớm nhất.`
+        );
+      } catch (emailError) {
+        console.error('Gửi email thất bại', emailError);
+        message.warning('Hồ sơ đã nộp nhưng không thể gửi email thông báo. Vui lòng kiểm tra lại email cá nhân.');
+      }
     } catch (err) {
       console.error('Nộp hồ sơ thất bại', err);
     }

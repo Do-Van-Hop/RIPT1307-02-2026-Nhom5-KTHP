@@ -72,7 +72,7 @@ const Dashboard: React.FC = () => {
 
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 70 },
-    { title: 'Thí sinh ID', dataIndex: 'user_id', key: 'user_id' },
+    { title: 'Họ tên thí sinh', dataIndex: 'full_name', key: 'full_name' },
     {
       title: 'Trường',
       dataIndex: 'school_id',

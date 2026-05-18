@@ -33,6 +33,8 @@ export const createApplication = (data: unknown) => tsrequest.post('/application
 
 export const updateApplication = (id: number, data: unknown) =>
   tsrequest.put(`/applications/${id}`, data);
+export const sendApplicationEmail = (id: number, subject: string, body: string) =>
+  tsrequest.post(`/applications/${id}/send-email`, { subject, body });
 
 export const deleteApplication = (id: number) => tsrequest.delete(`/applications/${id}`);
 
