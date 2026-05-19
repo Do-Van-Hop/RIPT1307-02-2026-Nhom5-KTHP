@@ -24,9 +24,14 @@ class ApplicationResponse(BaseModel):
     full_name: str
     status: str
     cccd_number: str
+    score: float
     scores: dict[str, float]
     submitted_at: datetime | None = None
+    created_at: datetime
     major_name: str
+    school_name: str
+    subject_group_name: str
+    subjects: list[str]
 
 class ApplicationDetailResponse(BaseModel):
 
@@ -46,6 +51,9 @@ class ApplicationDetailResponse(BaseModel):
     reject_reason: str | None = None
     scores: dict[str, float]
     submitted_at: datetime | None = None
+    school_name: str
+    subject_group_name: str
+    subjects: list[str]
     model_config = ConfigDict(
         from_attributes=True
     )
@@ -60,6 +68,7 @@ class ApplicationUpdate(BaseModel):
     phone: str
     cccd_number: str
     score: float
+    scores: dict[str, float]
     priority: int
     files: list[FileItem]
     
