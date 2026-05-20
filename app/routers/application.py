@@ -13,6 +13,7 @@ from app.models.user import User
 from app.models.major import Major
 from app.models.major_subject_group import MajorSubjectGroup
 from app.models.file import File
+from app.schemas.email import SendEmailRequest
 
 from app.schemas.application import (
     ApplicationCreate,
@@ -110,6 +111,12 @@ def create_application(
         "cccd_number": app.cccd_number,
 
         "major_name": app.major.name,
+        
+        "school_name": app.school.name,
+
+        "subject_group_name": app.subject_group.name,
+
+        "subjects": app.subject_group.subjects,
 
         "score": app.score,
 
@@ -128,7 +135,51 @@ def get_my_applications(
         Application.user_id == current_user.id
     ).all()
 
-    return applications
+    mapped_items = []
+    for app in applications:
+
+        mapped_items.append({
+
+            "id": app.id,
+
+            "school_id": app.school_id,
+
+            "major_id": app.major_id,
+
+            "major_name": app.major.name,
+            
+            "school_name": app.school.name,
+
+            "subject_group_name": app.subject_group.name,
+
+            "subjects": app.subject_group.subjects,
+
+            "subject_group_id": app.subject_group_id,
+
+            "full_name": app.full_name,
+
+            "dob": app.dob,
+
+            "phone": app.phone,
+
+            "cccd_number": app.cccd_number,
+
+            "score": app.score,
+
+            "scores": app.scores,
+
+            "priority": app.priority,
+
+            "status": app.status,
+
+            "submitted_at": app.submitted_at,
+
+            "created_at": app.created_at,
+
+            "reject_reason": app.reject_reason
+        })
+
+    return mapped_items
 
 @router.put("/{app_id}/submit")
 def submit_application(
@@ -156,6 +207,28 @@ def submit_application(
         )
 
     app.status = ApplicationStatus.PENDING
+    user = db.query(User).filter(
+        User.id == app.user_id
+    ).first()
+
+    try:
+
+        send_email(
+            to_email=user.email,
+            subject="Nộp hồ sơ thành công",
+            body="""
+    Hồ sơ tuyển sinh của bạn đã được ghi nhận thành công.
+
+    Vui lòng chờ quản trị viên xét duyệt.
+
+    Trân trọng.
+    """
+        )
+
+    except Exception as e:
+
+        print("Send email error:", e)
+
     app.submitted_at = datetime.now()
     db.commit()
 
@@ -199,9 +272,51 @@ def get_applications(
     offset = (page - 1) * limit
 
     applications = query.offset(offset).limit(limit).all()
+    mapped_items = []
+    for app in applications:
 
+        mapped_items.append({
+
+            "id": app.id,
+
+            "school_id": app.school_id,
+
+            "major_id": app.major_id,
+
+            "major_name": app.major.name,
+                  
+            "school_name": app.school.name,
+
+            "subject_group_name": app.subject_group.name,
+
+            "subjects": app.subject_group.subjects,
+
+            "subject_group_id": app.subject_group_id,
+
+            "full_name": app.full_name,
+
+            "dob": app.dob,
+
+            "phone": app.phone,
+
+            "cccd_number": app.cccd_number,
+
+            "score": app.score,
+
+            "scores": app.scores,
+
+            "priority": app.priority,
+
+            "status": app.status,
+
+            "submitted_at": app.submitted_at,
+
+            "created_at": app.created_at,
+
+            "reject_reason": app.reject_reason
+        })
     return {
-        "items": applications,
+        "items": mapped_items,
         "total": total,
         "page": page,
         "limit": limit
@@ -227,44 +342,33 @@ def get_application_detail(
             detail="Application not found"
         )
 
-    if current_user.role.value == "admin":
-        return app
+    # candidate chỉ xem được hồ sơ của mình
+    if current_user.role.value != "admin":
 
-    if app.user_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Permission denied"
-        )
+        if app.user_id != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Permission denied"
+            )
 
     return {
         "id": app.id,
-
         "school_id": app.school_id,
-
         "major_id": app.major_id,
-
         "major_name": app.major.name,
-
+        "school_name": app.school.name,
+        "subject_group_name": app.subject_group.name,
+        "subjects": app.subject_group.subjects,
         "subject_group_id": app.subject_group_id,
-
         "full_name": app.full_name,
-
         "dob": app.dob,
-
         "phone": app.phone,
-
         "cccd_number": app.cccd_number,
-
         "score": app.score,
-
         "scores": app.scores,
-
         "priority": app.priority,
-
         "status": app.status,
-
         "submitted_at": app.submitted_at,
-
         "files": app.files
     }
 
@@ -399,6 +503,53 @@ def delete_application(
 
     return {
         "message": "Application deleted successfully"
+    }
+    
+@router.post("/{app_id}/send-email")
+def send_application_email(
+    app_id: int,
+    data: SendEmailRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin)
+):
+
+    app = db.query(Application).filter(
+        Application.id == app_id
+    ).first()
+
+    if not app:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found"
+        )
+
+    user = db.query(User).filter(
+        User.id == app.user_id
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    try:
+
+        send_email(
+            to_email=user.email,
+            subject=data.subject,
+            body=data.body
+        )
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Send email failed: {str(e)}"
+        )
+
+    return {
+        "message": "Email sent successfully"
     }
     
 @router.patch("/admin/{app_id}/status")

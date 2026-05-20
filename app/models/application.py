@@ -38,6 +38,9 @@ class Application(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
     submitted_at = Column(TIMESTAMP, nullable=True)
     reject_reason = Column(String(1000), nullable=True)
+    school = relationship("School")
+
+    subject_group = relationship("SubjectGroup")
     
     files = relationship(
         "File",
