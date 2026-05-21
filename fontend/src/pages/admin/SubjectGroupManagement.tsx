@@ -28,32 +28,33 @@ const SubjectGroupManagement: React.FC = () => {
     mutationFn: catalogService.createSubjectGroup,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subjectGroups'] });
-      message.success('Thêm tổ hợp thành công');
+      message.success('Thêm tổ hợp môn thành công');
       setIsModalOpen(false);
       form.resetFields();
     },
-    onError: (err: any) => message.error(err.response?.data?.message || 'Lỗi'),
+    onError: (err: any) => message.error(err.response?.data?.detail || 'Lỗi khi thêm tổ hợp'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => catalogService.updateSubjectGroup(id, data),
+    mutationFn: ({ id, data }: { id: number; data: { name: string; subjects: string[] } }) =>
+      catalogService.updateSubjectGroup(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subjectGroups'] });
-      message.success('Cập nhật tổ hợp thành công');
+      message.success('Cập nhật tổ hợp môn thành công');
       setIsModalOpen(false);
       setEditingGroup(null);
       form.resetFields();
     },
-    onError: (err: any) => message.error(err.response?.data?.message || 'Lỗi'),
+    onError: (err: any) => message.error(err.response?.data?.detail || 'Lỗi cập nhật'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: catalogService.deleteSubjectGroup,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subjectGroups'] });
-      message.success('Xóa tổ hợp thành công');
+      message.success('Xóa tổ hợp môn thành công');
     },
-    onError: (err: any) => message.error(err.response?.data?.message || 'Lỗi'),
+    onError: (err: any) => message.error(err.response?.data?.detail || 'Lỗi xóa tổ hợp'),
   });
 
   const handleAdd = () => {
@@ -84,7 +85,7 @@ const SubjectGroupManagement: React.FC = () => {
         createMutation.mutate(payload);
       }
     } catch (err) {
-      // validation errors
+      // validation error
     }
   };
 
@@ -96,7 +97,9 @@ const SubjectGroupManagement: React.FC = () => {
       key: 'subjects',
       render: (subjects: string[]) => (
         <>
-          {subjects?.map((subject) => <Tag key={subject}>{subject}</Tag>)}
+          {subjects?.map((subject) => (
+            <Tag key={subject}>{subject}</Tag>
+          ))}
         </>
       ),
     },
@@ -109,7 +112,7 @@ const SubjectGroupManagement: React.FC = () => {
             Sửa
           </Button>
           <Popconfirm
-            title="Xác nhận xóa tổ hợp này?"
+            title="Xóa tổ hợp môn sẽ ảnh hưởng đến các ngành và hồ sơ đã dùng tổ hợp này. Tiếp tục?"
             onConfirm={() => deleteMutation.mutate(record.id)}
             okText="Xóa"
             cancelText="Hủy"
@@ -131,21 +134,13 @@ const SubjectGroupManagement: React.FC = () => {
           Thêm tổ hợp
         </Button>
       </div>
-
-      <Table
-        dataSource={data}
-        columns={columns}
-        rowKey="id"
-        loading={isLoading}
-        pagination={{ pageSize: 10 }}
-      />
-
+      <Table dataSource={data} columns={columns} rowKey="id" loading={isLoading} pagination={{ pageSize: 10 }} />
       <Modal
-        title={editingGroup ? 'Sửa tổ hợp' : 'Thêm tổ hợp mới'}
+        title={editingGroup ? 'Sửa tổ hợp môn' : 'Thêm tổ hợp môn mới'}
         open={isModalOpen}
         onOk={handleSubmit}
         onCancel={() => setIsModalOpen(false)}
-        confirmLoading={createMutation.isLoading || updateMutation.isLoading}
+        confirmLoading={createMutation.isPending || updateMutation.isPending}
       >
         <Form form={form} layout="vertical">
           <Form.Item

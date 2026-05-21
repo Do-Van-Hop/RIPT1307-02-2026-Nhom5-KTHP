@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Form, Input, Button, Typography, message } from 'antd';
-import { MailOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
+import { MailOutlined, LockOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import tsrequest from '../services/tsrequest';
 import { useAuthStore } from '../store/authStore';
+import { AxiosError } from 'axios';
 
 const { Title } = Typography;
 
@@ -16,7 +17,7 @@ interface RegisterForm {
 const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { register } = useAuthStore();
+  const { login } = useAuthStore();
 
   const onFinish = async (values: RegisterForm) => {
     setLoading(true);
@@ -25,12 +26,15 @@ const Register: React.FC = () => {
         email: values.email,
         password: values.password,
       });
-      const { user, token } = response.data;
-      register(user, token);
+      const { access_token, user } = response.data;
+      login(user, access_token);
       message.success('Đăng ký thành công!');
       navigate('/candidate');
     } catch (error: unknown) {
-      const msg = (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Đăng ký thất bại';
+      let msg = 'Đăng ký thất bại';
+      if (error instanceof AxiosError) {
+        msg = error.response?.data?.detail || error.response?.data?.message || msg;
+      }
       message.error(msg);
     } finally {
       setLoading(false);

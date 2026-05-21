@@ -8,6 +8,7 @@ interface Props {
 interface State {
   hasError: boolean;
   error?: Error;
+  errorInfo?: React.ErrorInfo;
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
@@ -22,7 +23,13 @@ class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    this.setState({ errorInfo });
   }
+
+  handleReset = () => {
+    this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+    window.location.reload();
+  };
 
   render() {
     if (this.state.hasError) {
@@ -32,13 +39,14 @@ class ErrorBoundary extends React.Component<Props, State> {
           title="Đã có lỗi xảy ra"
           subTitle="Rất tiếc, trang này đang gặp sự cố. Vui lòng thử lại sau."
           extra={
-            <Button type="primary" onClick={() => window.location.reload()}>
+            <Button type="primary" onClick={this.handleReset}>
               Tải lại trang
             </Button>
           }
         />
       );
     }
+
     return this.props.children;
   }
 }

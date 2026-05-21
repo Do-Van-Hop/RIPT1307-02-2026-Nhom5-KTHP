@@ -1,0 +1,24 @@
+/* Override Ant Design primary colors */
+.ant-btn-primary {
+  background-color: #B30000 !important;
+  border-color: #B30000 !important;
+}
+.ant-btn-primary:hover {
+  background-color: #E60000 !important;
+  border-color: #E60000 !important;
+}
+.ant-btn-link {
+  color: #0038F7 !important;
+}
+.ant-tag-blue, .ant-tag-processing {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+  color: #0038F7;
+}
+.ant-menu-item-selected {
+  background-color: #B30000 !important;
+  color: #fff !important;
+}
+.ant-layout-sider .ant-menu-dark .ant-menu-item-selected {
+  background-color: #B30000 !important;
+}

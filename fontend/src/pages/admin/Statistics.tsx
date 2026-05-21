@@ -4,6 +4,14 @@ import { Column, Pie } from '@ant-design/charts';
 import { useQuery } from '@tanstack/react-query';
 import * as applicationService from '../../services/applicationService';
 
+const statusMap: Record<string, string> = {
+  DRAFT: 'Nháp',
+  SUBMITTED: 'Đã nộp',
+  PENDING: 'Chờ duyệt',
+  APPROVED: 'Đã duyệt',
+  REJECTED: 'Từ chối',
+};
+
 const Statistics: React.FC = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['statistics'],
@@ -18,47 +26,31 @@ const Statistics: React.FC = () => {
 
   const schoolColumnConfig = {
     data: data.bySchool || [],
-    xField: 'schoolName',
-    yField: 'count',
-    label: {
-      position: 'top' as const,
-      style: { fill: '#000000' },
-    },
-    xAxis: { label: { autoRotate: true } },
-    meta: { count: { alias: 'Số lượng hồ sơ' } },
+    xField: 'school',
+    yField: 'total',
+    label: { position: 'top' as const, style: { fill: '#000000' } },
+    xAxis: { label: { autoRotate: true, autoHide: true } },
+    meta: { total: { alias: 'Số lượng hồ sơ' } },
   };
 
   const majorColumnConfig = {
     data: data.byMajor || [],
-    xField: 'majorName',
-    yField: 'count',
+    xField: 'major',
+    yField: 'total',
     label: { position: 'top' as const },
-    xAxis: { label: { autoRotate: true } },
-    meta: { count: { alias: 'Số lượng hồ sơ' } },
-    seriesField: 'schoolName',
-    isGroup: true,
+    xAxis: { label: { autoRotate: true, autoHide: true } },
+    meta: { total: { alias: 'Số lượng hồ sơ' } },
   };
 
   const statusPieConfig = {
     data: (data.byStatus || []).map((item: any) => ({
       ...item,
-      status: statusMap[item.status] ? statusMap[item.status].text : item.status,
+      status: statusMap[item.status] || item.status,
     })),
-    angleField: 'count',
+    angleField: 'total',
     colorField: 'status',
     radius: 0.8,
-    label: {
-      type: 'outer',
-      content: '{name} ({percentage})',
-    },
-  };
-
-  const statusMap: Record<string, string> = {
-    DRAFT: 'Nháp',
-    SUBMITTED: 'Đã nộp',
-    PENDING: 'Chờ duyệt',
-    APPROVED: 'Đã duyệt',
-    REJECTED: 'Từ chối',
+    label: { type: 'outer', content: '{name} ({percentage})' },
   };
 
   return (

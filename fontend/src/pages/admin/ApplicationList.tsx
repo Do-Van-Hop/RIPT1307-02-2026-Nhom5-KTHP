@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Table, Tag, Button, Select, Space, message, Popconfirm } from 'antd';
+import { Table, Tag, Button, Select, Space, message, Modal, Input } from 'antd';
 import { EyeOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import * as applicationService from '../../services/applicationService';
 import * as catalogService from '../../services/catalogService';
+import { useAllMajors } from '../../hooks/useAllMajors';
 
 const { Option } = Select;
 
@@ -19,6 +20,7 @@ const statusMap: Record<string, { color: string; text: string }> = {
 const ApplicationList: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
   const [filters, setFilters] = useState({
     schoolId: undefined as number | undefined,
     majorId: undefined as number | undefined,
@@ -27,13 +29,28 @@ const ApplicationList: React.FC = () => {
     limit: 10,
   });
 
+  // State cho modal từ chối
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [currentRejectId, setCurrentRejectId] = useState<number | null>(null);
+
   const { data: schools } = useQuery({
     queryKey: ['schools'],
     queryFn: async () => (await catalogService.getSchools()).data,
     staleTime: 60000,
   });
 
-  const { data: majors } = useQuery({
+  const { data: allMajorsData } = useAllMajors();
+  const majorMap = allMajorsData?.map || new Map();
+
+  const { data: subjectGroups } = useQuery({
+    queryKey: ['subjectGroups'],
+    queryFn: async () => (await catalogService.getSubjectGroups()).data,
+    staleTime: 60000,
+  });
+  const subjectGroupMap = new Map(subjectGroups?.map((sg: any) => [sg.id, sg.name]));
+
+  const { data: majorsBySchool } = useQuery({
     queryKey: ['majors', filters.schoolId],
     queryFn: async () => {
       if (!filters.schoolId) return [];
@@ -46,8 +63,8 @@ const ApplicationList: React.FC = () => {
     queryKey: ['adminApplications', filters],
     queryFn: async () => {
       const res = await applicationService.getAllApplications({
-        schoolId: filters.schoolId,
-        majorId: filters.majorId,
+        school_id: filters.schoolId,
+        major_id: filters.majorId,
         status: filters.status,
         page: filters.page,
         limit: filters.limit,
@@ -58,28 +75,77 @@ const ApplicationList: React.FC = () => {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) =>
-      applicationService.updateApplicationStatus(id, status),
-    onSuccess: () => {
+    mutationFn: ({ id, status, reason }: { id: number; status: string; reason?: string }) =>
+      applicationService.updateApplicationStatus(id, status, reason),
+    onSuccess: async (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminApplications'] });
       message.success('Cập nhật trạng thái thành công');
+
+      const subject = variables.status === 'APPROVED'
+        ? 'Hồ sơ xét tuyển đã được duyệt'
+        : 'Hồ sơ xét tuyển bị từ chối';
+      const body = variables.status === 'APPROVED'
+        ? `Chúc mừng! Hồ sơ #${variables.id} của bạn đã được duyệt.\nVui lòng theo dõi các bước tiếp theo.`
+        : `Rất tiếc, hồ sơ #${variables.id} của bạn đã bị từ chối.\nLý do: ${variables.reason || 'Không có lý do cụ thể'}\nLiên hệ phòng tuyển sinh nếu cần giải đáp.`;
+      try {
+        await applicationService.sendApplicationEmail(variables.id, subject, body);
+        message.success('📧 Đã gửi email thông báo cho thí sinh');
+      } catch (emailError) {
+        console.error('Gửi email thất bại', emailError);
+        message.warning('⚠️ Cập nhật trạng thái thành công nhưng không thể gửi email. Vui lòng kiểm tra cấu hình email.');
+      }
     },
     onError: (err: any) => {
-      message.error(err.response?.data?.message || 'Lỗi khi cập nhật trạng thái');
+      message.error(err.response?.data?.detail || 'Lỗi khi cập nhật trạng thái');
     },
   });
 
+  const openRejectModal = (id: number) => {
+    setCurrentRejectId(id);
+    setRejectReason('');
+    setRejectModalOpen(true);
+  };
+
+  const handleRejectConfirm = () => {
+    if (!rejectReason.trim()) {
+      message.warning('Vui lòng nhập lý do từ chối');
+      return;
+    }
+    if (currentRejectId) {
+      updateStatusMutation.mutate({ id: currentRejectId, status: 'REJECTED', reason: rejectReason });
+      setRejectModalOpen(false);
+    }
+  };
+
   const columns = [
-    { title: 'ID', dataIndex: 'id', key: 'id', width: 60 },
+    { title: 'ID', dataIndex: 'id', key: 'id', width: 70 },
     {
-      title: 'Thí sinh',
-      dataIndex: ['user', 'email'],
-      key: 'user',
-      render: (email: string) => email || 'N/A',
+      title: 'Họ tên thí sinh',
+      dataIndex: 'full_name',
+      key: 'full_name',
+      render: (fullName: string) => fullName || 'N/A',
     },
-    { title: 'Trường', dataIndex: ['school', 'name'], key: 'school' },
-    { title: 'Ngành', dataIndex: ['major', 'name'], key: 'major' },
-    { title: 'Tổ hợp', dataIndex: ['subjectGroup', 'name'], key: 'subjectGroup' },
+    {
+      title: 'Trường',
+      dataIndex: 'school_id',
+      key: 'school_id',
+      render: (schoolId: number) => {
+        const school = schools?.find((s: any) => s.id === schoolId);
+        return school?.name || `ID: ${schoolId}`;
+      },
+    },
+    {
+      title: 'Ngành',
+      dataIndex: 'major_id',
+      key: 'major_id',
+      render: (majorId: number) => majorMap.get(majorId) || `ID: ${majorId}`,
+    },
+    {
+      title: 'Tổ hợp',
+      dataIndex: 'subject_group_id',
+      key: 'subject_group_id',
+      render: (groupId: number) => subjectGroupMap.get(groupId) || `ID: ${groupId}`,
+    },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
@@ -91,8 +157,8 @@ const ApplicationList: React.FC = () => {
     },
     {
       title: 'Ngày nộp',
-      dataIndex: 'submittedAt',
-      key: 'submittedAt',
+      dataIndex: 'submitted_at',
+      key: 'submitted_at',
       render: (date: string) => (date ? new Date(date).toLocaleDateString('vi-VN') : '-'),
     },
     {
@@ -109,36 +175,22 @@ const ApplicationList: React.FC = () => {
           </Button>
           {record.status === 'PENDING' && (
             <>
-              <Popconfirm
-                title="Duyệt hồ sơ này?"
-                onConfirm={() => updateStatusMutation.mutate({ id: record.id, status: 'APPROVED' })}
-                okText="Duyệt"
-                cancelText="Hủy"
+              <Button
+                icon={<CheckOutlined />}
+                size="small"
+                type="primary"
+                onClick={() => updateStatusMutation.mutate({ id: record.id, status: 'APPROVED' })}
               >
-                <Button
-                  icon={<CheckOutlined />}
-                  size="small"
-                  type="primary"
-                  loading={updateStatusMutation.isPending}
-                >
-                  Duyệt
-                </Button>
-              </Popconfirm>
-              <Popconfirm
-                title="Từ chối hồ sơ này?"
-                onConfirm={() => updateStatusMutation.mutate({ id: record.id, status: 'REJECTED' })}
-                okText="Từ chối"
-                cancelText="Hủy"
+                Duyệt
+              </Button>
+              <Button
+                icon={<CloseOutlined />}
+                size="small"
+                danger
+                onClick={() => openRejectModal(record.id)}
               >
-                <Button
-                  icon={<CloseOutlined />}
-                  size="small"
-                  danger
-                  loading={updateStatusMutation.isPending}
-                >
-                  Từ chối
-                </Button>
-              </Popconfirm>
+                Từ chối
+              </Button>
             </>
           )}
         </Space>
@@ -159,17 +211,12 @@ const ApplicationList: React.FC = () => {
           allowClear
           style={{ width: 220 }}
           value={filters.schoolId}
-          onChange={(value) =>
-            setFilters({ ...filters, schoolId: value, majorId: undefined, page: 1 })
-          }
+          onChange={(value) => setFilters({ ...filters, schoolId: value, majorId: undefined, page: 1 })}
         >
           {schools?.map((s: any) => (
-            <Option key={s.id} value={s.id}>
-              {s.name}
-            </Option>
+            <Option key={s.id} value={s.id}>{s.name}</Option>
           ))}
         </Select>
-
         <Select
           placeholder="Chọn ngành"
           allowClear
@@ -178,13 +225,10 @@ const ApplicationList: React.FC = () => {
           disabled={!filters.schoolId}
           onChange={(value) => setFilters({ ...filters, majorId: value, page: 1 })}
         >
-          {majors?.map((m: any) => (
-            <Option key={m.id} value={m.id}>
-              {m.name}
-            </Option>
+          {majorsBySchool?.map((m: any) => (
+            <Option key={m.id} value={m.id}>{m.name}</Option>
           ))}
         </Select>
-
         <Select
           placeholder="Trạng thái"
           allowClear
@@ -213,8 +257,26 @@ const ApplicationList: React.FC = () => {
           pageSizeOptions: ['10', '20', '50'],
         }}
         onChange={handleTableChange}
-        scroll={{ x: 900 }}
+        scroll={{ x: 1000 }}
       />
+
+      {/* Modal từ chối hồ sơ */}
+      <Modal
+        title="Lý do từ chối"
+        open={rejectModalOpen}
+        onOk={handleRejectConfirm}
+        onCancel={() => setRejectModalOpen(false)}
+        confirmLoading={updateStatusMutation.isPending}
+        okText="Xác nhận từ chối"
+        cancelText="Hủy"
+      >
+        <Input.TextArea
+          rows={4}
+          value={rejectReason}
+          onChange={(e) => setRejectReason(e.target.value)}
+          placeholder="Nhập lý do từ chối hồ sơ..."
+        />
+      </Modal>
     </div>
   );
 };

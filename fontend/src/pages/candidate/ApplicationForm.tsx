@@ -214,7 +214,6 @@ const ApplicationForm: React.FC = () => {
       }
 
       await submitMutation.mutateAsync(applicationId);
-
       try {
         await applicationService.sendApplicationEmail(
           applicationId,
