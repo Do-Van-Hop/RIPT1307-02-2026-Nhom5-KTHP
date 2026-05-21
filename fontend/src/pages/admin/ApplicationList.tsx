@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Table, Tag, Button, Select, Space, message, Popconfirm } from 'antd';
+import { Table, Tag, Button, Select, Space, message, Modal, Input } from 'antd';
 import { EyeOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -20,6 +20,7 @@ const statusMap: Record<string, { color: string; text: string }> = {
 const ApplicationList: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
   const [filters, setFilters] = useState({
     schoolId: undefined as number | undefined,
     majorId: undefined as number | undefined,
@@ -27,6 +28,11 @@ const ApplicationList: React.FC = () => {
     page: 1,
     limit: 10,
   });
+
+  // State cho modal từ chối
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [currentRejectId, setCurrentRejectId] = useState<number | null>(null);
 
   const { data: schools } = useQuery({
     queryKey: ['schools'],
@@ -78,11 +84,9 @@ const ApplicationList: React.FC = () => {
       const subject = variables.status === 'APPROVED'
         ? 'Hồ sơ xét tuyển đã được duyệt'
         : 'Hồ sơ xét tuyển bị từ chối';
-
       const body = variables.status === 'APPROVED'
         ? `Chúc mừng! Hồ sơ #${variables.id} của bạn đã được duyệt.\nVui lòng theo dõi các bước tiếp theo.`
         : `Rất tiếc, hồ sơ #${variables.id} của bạn đã bị từ chối.\nLý do: ${variables.reason || 'Không có lý do cụ thể'}\nLiên hệ phòng tuyển sinh nếu cần giải đáp.`;
-
       try {
         await applicationService.sendApplicationEmail(variables.id, subject, body);
         message.success('📧 Đã gửi email thông báo cho thí sinh');
@@ -95,6 +99,23 @@ const ApplicationList: React.FC = () => {
       message.error(err.response?.data?.detail || 'Lỗi khi cập nhật trạng thái');
     },
   });
+
+  const openRejectModal = (id: number) => {
+    setCurrentRejectId(id);
+    setRejectReason('');
+    setRejectModalOpen(true);
+  };
+
+  const handleRejectConfirm = () => {
+    if (!rejectReason.trim()) {
+      message.warning('Vui lòng nhập lý do từ chối');
+      return;
+    }
+    if (currentRejectId) {
+      updateStatusMutation.mutate({ id: currentRejectId, status: 'REJECTED', reason: rejectReason });
+      setRejectModalOpen(false);
+    }
+  };
 
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 70 },
@@ -117,17 +138,13 @@ const ApplicationList: React.FC = () => {
       title: 'Ngành',
       dataIndex: 'major_id',
       key: 'major_id',
-      render: (majorId: number) => {
-        return majorMap.get(majorId) || `ID: ${majorId}`;
-      },
+      render: (majorId: number) => majorMap.get(majorId) || `ID: ${majorId}`,
     },
     {
       title: 'Tổ hợp',
       dataIndex: 'subject_group_id',
       key: 'subject_group_id',
-      render: (groupId: number) => {
-        return subjectGroupMap.get(groupId) || `ID: ${groupId}`;
-      },
+      render: (groupId: number) => subjectGroupMap.get(groupId) || `ID: ${groupId}`,
     },
     {
       title: 'Trạng thái',
@@ -158,22 +175,22 @@ const ApplicationList: React.FC = () => {
           </Button>
           {record.status === 'PENDING' && (
             <>
-              <Popconfirm
-                title="Duyệt hồ sơ này?"
-                onConfirm={() => updateStatusMutation.mutate({ id: record.id, status: 'APPROVED' })}
+              <Button
+                icon={<CheckOutlined />}
+                size="small"
+                type="primary"
+                onClick={() => updateStatusMutation.mutate({ id: record.id, status: 'APPROVED' })}
               >
-                <Button icon={<CheckOutlined />} size="small" type="primary">
-                  Duyệt
-                </Button>
-              </Popconfirm>
-              <Popconfirm
-                title="Từ chối hồ sơ này?"
-                onConfirm={() => updateStatusMutation.mutate({ id: record.id, status: 'REJECTED', reason: '' })}
+                Duyệt
+              </Button>
+              <Button
+                icon={<CloseOutlined />}
+                size="small"
+                danger
+                onClick={() => openRejectModal(record.id)}
               >
-                <Button icon={<CloseOutlined />} size="small" danger>
-                  Từ chối
-                </Button>
-              </Popconfirm>
+                Từ chối
+              </Button>
             </>
           )}
         </Space>
@@ -226,6 +243,7 @@ const ApplicationList: React.FC = () => {
           <Option value="REJECTED">Từ chối</Option>
         </Select>
       </Space>
+
       <Table
         columns={columns}
         dataSource={data?.items || []}
@@ -241,6 +259,24 @@ const ApplicationList: React.FC = () => {
         onChange={handleTableChange}
         scroll={{ x: 1000 }}
       />
+
+      {/* Modal từ chối hồ sơ */}
+      <Modal
+        title="Lý do từ chối"
+        open={rejectModalOpen}
+        onOk={handleRejectConfirm}
+        onCancel={() => setRejectModalOpen(false)}
+        confirmLoading={updateStatusMutation.isPending}
+        okText="Xác nhận từ chối"
+        cancelText="Hủy"
+      >
+        <Input.TextArea
+          rows={4}
+          value={rejectReason}
+          onChange={(e) => setRejectReason(e.target.value)}
+          placeholder="Nhập lý do từ chối hồ sơ..."
+        />
+      </Modal>
     </div>
   );
 };
