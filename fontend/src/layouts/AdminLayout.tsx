@@ -22,9 +22,7 @@ const AdminLayout: React.FC = () => {
 
   const menuItems = [
     { key: '/admin/dashboard', icon: <DashboardOutlined />, label: 'Tổng quan' },
-    { key: '/admin/schools', icon: <BankOutlined />, label: 'Quản lý Trường' },
-    { key: '/admin/majors', icon: <BankOutlined />, label: 'Quản lý Ngành' },
-    { key: '/admin/subject-groups', icon: <BankOutlined />, label: 'Tổ hợp môn' },
+    { key: '/admin/unified', icon: <BankOutlined />, label: 'Quản lý dữ liệu' },
     { key: '/admin/applications', icon: <FileTextOutlined />, label: 'Hồ sơ' },
     { key: '/admin/statistics', icon: <BarChartOutlined />, label: 'Thống kê' },
   ];

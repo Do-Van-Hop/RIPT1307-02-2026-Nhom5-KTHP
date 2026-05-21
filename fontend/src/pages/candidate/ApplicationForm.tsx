@@ -193,6 +193,7 @@ const ApplicationForm: React.FC = () => {
           priority: priorityMap[values.priority],
           files: buildFilesPayload(),
         };
+        console.log('Payload nộp hồ sơ:', payload);
         const res = await createMutation.mutateAsync(payload);
         applicationId = res.data.id;
       } else {
@@ -209,6 +210,7 @@ const ApplicationForm: React.FC = () => {
           priority: priorityMap[values.priority],
           files: buildFilesPayload(),
         };
+        console.log('Payload nộp hồ sơ:', payload);
         await updateMutation.mutateAsync({ id: Number(id), data: payload });
         applicationId = Number(id);
       }

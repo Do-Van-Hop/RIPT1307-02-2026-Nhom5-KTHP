@@ -10,9 +10,6 @@ import CandidateLayout from './layouts/CandidateLayout';
 import AdminLayout from './layouts/AdminLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
-import SchoolManagement from './pages/admin/SchoolManagement';
-import MajorManagement from './pages/admin/MajorManagement';
-import SubjectGroupManagement from './pages/admin/SubjectGroupManagement';
 import MyApplications from './pages/candidate/Applications';
 import ApplicationForm from './pages/candidate/ApplicationForm';
 import ApplicationDetail from './pages/candidate/ApplicationDetail';
@@ -24,6 +21,7 @@ import Forbidden from './pages/Forbidden';
 import Dashboard from './pages/admin/Dashboard';
 import Profile from './pages/candidate/Profile';
 import Results from './pages/candidate/Results';
+import UnifiedManagement from './pages/admin/UnifiedManagement';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,9 +68,7 @@ const App: React.FC = () => {
                 <Route path="/admin" element={<AdminLayout />}>
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<Dashboard />} />
-                  <Route path="schools" element={<SchoolManagement />} />
-                  <Route path="majors" element={<MajorManagement />} />
-                  <Route path="subject-groups" element={<SubjectGroupManagement />} />
+                  <Route path="unified" element={<UnifiedManagement />} />
                   <Route path="applications" element={<AdminApplicationList />} />
                   <Route path="applications/:id" element={<AdminApplicationDetail />} />
                   <Route path="statistics" element={<Statistics />} />

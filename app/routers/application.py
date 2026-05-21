@@ -41,89 +41,95 @@ def create_application(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    try:
+        major = db.query(Major).filter(
+            Major.id == data.major_id,
+            Major.school_id == data.school_id
+        ).first()
 
-    major = db.query(Major).filter(
-        Major.id == data.major_id,
-        Major.school_id == data.school_id
-    ).first()
+        if not major:
+            raise HTTPException(
+                status_code=400,
+                detail="Major does not belong to this school"
+            )
 
-    if not major:
-        raise HTTPException(
-            status_code=400,
-            detail="Major does not belong to this school"
+        valid_group = db.query(MajorSubjectGroup).filter(
+            MajorSubjectGroup.major_id == data.major_id,
+            MajorSubjectGroup.subject_group_id == data.subject_group_id
+        ).first()
+
+        if not valid_group:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid subject group for this major"
+            )
+
+        app = Application(
+            user_id=current_user.id,
+
+            school_id=data.school_id,
+            major_id=data.major_id,
+            subject_group_id=data.subject_group_id,
+
+            full_name=data.full_name,
+            dob=data.dob,
+            phone=data.phone,
+
+            cccd_number=data.cccd_number,
+
+            score=data.score,
+            scores=data.scores,
+            priority=data.priority,
+
+            status=ApplicationStatus.DRAFT
         )
 
-    valid_group = db.query(MajorSubjectGroup).filter(
-        MajorSubjectGroup.major_id == data.major_id,
-        MajorSubjectGroup.subject_group_id == data.subject_group_id
-    ).first()
+        db.add(app)
+        db.commit()
+        db.refresh(app)
 
-    if not valid_group:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid subject group for this major"
-        )
+        for item in data.files:
 
-    app = Application(
-        user_id=current_user.id,
+            new_file = File(
+                application_id=app.id,
+                file_url=item.file_url,
+                file_type=item.file_type,
+                file_size=None
+            )
 
-        school_id=data.school_id,
-        major_id=data.major_id,
-        subject_group_id=data.subject_group_id,
+            db.add(new_file)
 
-        full_name=data.full_name,
-        dob=data.dob,
-        phone=data.phone,
+        db.commit()
 
-        cccd_number=data.cccd_number,
+        return {
+            "id": app.id,
 
-        score=data.score,
-        scores=data.scores,
-        priority=data.priority,
+            "full_name": app.full_name,
 
-        status=ApplicationStatus.DRAFT
-    )
+            "status": app.status,
 
-    db.add(app)
-    db.commit()
-    db.refresh(app)
+            "cccd_number": app.cccd_number,
 
-    for item in data.files:
+            "major_name": app.major.name,
+            
+            "school_name": app.school.name,
 
-        new_file = File(
-            application_id=app.id,
-            file_url=item.file_url,
-            file_type=item.file_type,
-            file_size=None
-        )
+            "subject_group_name": app.subject_group.name,
 
-        db.add(new_file)
+            "subjects": app.subject_group.subjects,
 
-    db.commit()
+            "score": app.score,
 
-    return {
-        "id": app.id,
+            "scores": app.scores,
 
-        "full_name": app.full_name,
+            "submitted_at": app.submitted_at,
 
-        "status": app.status,
-
-        "cccd_number": app.cccd_number,
-
-        "major_name": app.major.name,
-        
-        "school_name": app.school.name,
-
-        "subject_group_name": app.subject_group.name,
-
-        "subjects": app.subject_group.subjects,
-
-        "score": app.score,
-
-        "scores": app.scores,
-
-        "submitted_at": app.submitted_at
-    }
+            "created_at": app.created_at
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/my")
 def get_my_applications(
@@ -353,6 +359,7 @@ def get_application_detail(
 
     return {
         "id": app.id,
+        "user_id": app.user_id,
         "school_id": app.school_id,
         "major_id": app.major_id,
         "major_name": app.major.name,
@@ -369,7 +376,8 @@ def get_application_detail(
         "priority": app.priority,
         "status": app.status,
         "submitted_at": app.submitted_at,
-        "files": app.files
+        "files": app.files,
+        "reject_reason": app.reject_reason
     }
 
 @router.put(

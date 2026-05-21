@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Table, Tag, Button, Select, Space, message, Modal, Input } from 'antd';
-import { EyeOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Table, Tag, Button, Select, Space, message } from 'antd';
+import { EyeOutlined } from '@ant-design/icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import * as applicationService from '../../services/applicationService';
 import * as catalogService from '../../services/catalogService';
@@ -29,11 +29,6 @@ const ApplicationList: React.FC = () => {
     limit: 10,
   });
 
-  // State cho modal từ chối
-  const [rejectModalOpen, setRejectModalOpen] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
-  const [currentRejectId, setCurrentRejectId] = useState<number | null>(null);
-
   const { data: schools } = useQuery({
     queryKey: ['schools'],
     queryFn: async () => (await catalogService.getSchools()).data,
@@ -48,6 +43,7 @@ const ApplicationList: React.FC = () => {
     queryFn: async () => (await catalogService.getSubjectGroups()).data,
     staleTime: 60000,
   });
+
   const subjectGroupMap = new Map(subjectGroups?.map((sg: any) => [sg.id, sg.name]));
 
   const { data: majorsBySchool } = useQuery({
@@ -74,47 +70,8 @@ const ApplicationList: React.FC = () => {
     keepPreviousData: true,
   });
 
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status, reason }: { id: number; status: string; reason?: string }) =>
-      applicationService.updateApplicationStatus(id, status, reason),
-    onSuccess: async (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['adminApplications'] });
-      message.success('Cập nhật trạng thái thành công');
-
-      const subject = variables.status === 'APPROVED'
-        ? 'Hồ sơ xét tuyển đã được duyệt'
-        : 'Hồ sơ xét tuyển bị từ chối';
-      const body = variables.status === 'APPROVED'
-        ? `Chúc mừng! Hồ sơ #${variables.id} của bạn đã được duyệt.\nVui lòng theo dõi các bước tiếp theo.`
-        : `Rất tiếc, hồ sơ #${variables.id} của bạn đã bị từ chối.\nLý do: ${variables.reason || 'Không có lý do cụ thể'}\nLiên hệ phòng tuyển sinh nếu cần giải đáp.`;
-      try {
-        await applicationService.sendApplicationEmail(variables.id, subject, body);
-        message.success('📧 Đã gửi email thông báo cho thí sinh');
-      } catch (emailError) {
-        console.error('Gửi email thất bại', emailError);
-        message.warning('⚠️ Cập nhật trạng thái thành công nhưng không thể gửi email. Vui lòng kiểm tra cấu hình email.');
-      }
-    },
-    onError: (err: any) => {
-      message.error(err.response?.data?.detail || 'Lỗi khi cập nhật trạng thái');
-    },
-  });
-
-  const openRejectModal = (id: number) => {
-    setCurrentRejectId(id);
-    setRejectReason('');
-    setRejectModalOpen(true);
-  };
-
-  const handleRejectConfirm = () => {
-    if (!rejectReason.trim()) {
-      message.warning('Vui lòng nhập lý do từ chối');
-      return;
-    }
-    if (currentRejectId) {
-      updateStatusMutation.mutate({ id: currentRejectId, status: 'REJECTED', reason: rejectReason });
-      setRejectModalOpen(false);
-    }
+  const handleTableChange = (pagination: any) => {
+    setFilters((prev) => ({ ...prev, page: pagination.current, limit: pagination.pageSize }));
   };
 
   const columns = [
@@ -173,34 +130,10 @@ const ApplicationList: React.FC = () => {
           >
             Xem
           </Button>
-          {record.status === 'PENDING' && (
-            <>
-              <Button
-                icon={<CheckOutlined />}
-                size="small"
-                type="primary"
-                onClick={() => updateStatusMutation.mutate({ id: record.id, status: 'APPROVED' })}
-              >
-                Duyệt
-              </Button>
-              <Button
-                icon={<CloseOutlined />}
-                size="small"
-                danger
-                onClick={() => openRejectModal(record.id)}
-              >
-                Từ chối
-              </Button>
-            </>
-          )}
         </Space>
       ),
     },
   ];
-
-  const handleTableChange = (pagination: any) => {
-    setFilters((prev) => ({ ...prev, page: pagination.current, limit: pagination.pageSize }));
-  };
 
   return (
     <div>
@@ -243,7 +176,6 @@ const ApplicationList: React.FC = () => {
           <Option value="REJECTED">Từ chối</Option>
         </Select>
       </Space>
-
       <Table
         columns={columns}
         dataSource={data?.items || []}
@@ -259,24 +191,6 @@ const ApplicationList: React.FC = () => {
         onChange={handleTableChange}
         scroll={{ x: 1000 }}
       />
-
-      {/* Modal từ chối hồ sơ */}
-      <Modal
-        title="Lý do từ chối"
-        open={rejectModalOpen}
-        onOk={handleRejectConfirm}
-        onCancel={() => setRejectModalOpen(false)}
-        confirmLoading={updateStatusMutation.isPending}
-        okText="Xác nhận từ chối"
-        cancelText="Hủy"
-      >
-        <Input.TextArea
-          rows={4}
-          value={rejectReason}
-          onChange={(e) => setRejectReason(e.target.value)}
-          placeholder="Nhập lý do từ chối hồ sơ..."
-        />
-      </Modal>
     </div>
   );
 };
