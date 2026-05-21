@@ -17,6 +17,7 @@ const MyApplications: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  // Lấy toàn bộ hồ sơ từ backend (hiện tại API chưa hỗ trợ phân trang)
   const { data, isLoading } = useQuery({
     queryKey: ['myApplications'],
     queryFn: async () => {
@@ -35,9 +36,24 @@ const MyApplications: React.FC = () => {
 
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 70 },
-    { title: 'Trường', dataIndex: ['school', 'name'], key: 'school', render: (name: string, record: any) => name || `ID: ${record.school_id}` },
-    { title: 'Ngành', dataIndex: ['major', 'name'], key: 'major', render: (name: string, record: any) => name || `ID: ${record.major_id}` },
-    { title: 'Tổ hợp', dataIndex: ['subjectGroup', 'name'], key: 'subjectGroup', render: (name: string, record: any) => name || `ID: ${record.subject_group_id}` },
+    {
+      title: 'Trường',
+      dataIndex: ['school', 'name'],
+      key: 'school',
+      render: (name: string, record: any) => name || `ID: ${record.school_id}`,
+    },
+    {
+      title: 'Ngành',
+      dataIndex: ['major', 'name'],
+      key: 'major',
+      render: (name: string, record: any) => name || `ID: ${record.major_id}`,
+    },
+    {
+      title: 'Tổ hợp',
+      dataIndex: ['subjectGroup', 'name'],
+      key: 'subjectGroup',
+      render: (name: string, record: any) => name || `ID: ${record.subject_group_id}`,
+    },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
@@ -52,12 +68,20 @@ const MyApplications: React.FC = () => {
       key: 'action',
       render: (_: unknown, record: applicationService.Application) => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" onClick={() => navigate(`/candidate/applications/${record.id}`)}>
+          <Button
+            icon={<EyeOutlined />}
+            size="small"
+            onClick={() => navigate(`/candidate/applications/${record.id}`)}
+          >
             Xem
           </Button>
           {record.status === 'DRAFT' && (
             <>
-              <Button icon={<EditOutlined />} size="small" onClick={() => navigate(`/candidate/applications/${record.id}/edit`)}>
+              <Button
+                icon={<EditOutlined />}
+                size="small"
+                onClick={() => navigate(`/candidate/applications/${record.id}/edit`)}
+              >
                 Sửa
               </Button>
               <Popconfirm
@@ -85,7 +109,22 @@ const MyApplications: React.FC = () => {
           Tạo hồ sơ mới
         </Button>
       </div>
-      <Table dataSource={data} columns={columns} rowKey="id" loading={isLoading} pagination={{ pageSize: 10 }} />
+
+      <Table
+        dataSource={data}
+        columns={columns}
+        rowKey="id"
+        loading={isLoading}
+        // ===== PHÂN TRANG (client‑side) =====
+        pagination={{
+          defaultPageSize: 10,
+          showSizeChanger: true,
+          pageSizeOptions: ['5', '10', '20', '50'],
+          showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} hồ sơ`,
+          total: data?.length || 0,
+        }}
+        locale={{ emptyText: 'Bạn chưa có hồ sơ nào' }}
+      />
     </div>
   );
 };

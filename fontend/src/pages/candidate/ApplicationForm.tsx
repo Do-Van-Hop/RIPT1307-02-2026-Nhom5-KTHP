@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Input, Button, Select, Upload, message, Space, Card, DatePicker } from 'antd';
+import { Form, Input, Button, Select, Upload, message, Space, Card, DatePicker, Modal } from 'antd'; // 👈 thêm Modal vào import
 import { PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -27,7 +27,6 @@ const ApplicationForm: React.FC = () => {
   const [selectedSchool, setSelectedSchool] = useState<number | null>(null);
   const [selectedMajor, setSelectedMajor] = useState<number | null>(null);
   const [selectedSubjectGroup, setSelectedSubjectGroup] = useState<number | null>(null);
-
   const [transcriptFiles, setTranscriptFiles] = useState<any[]>([]);
   const [cccdFrontFiles, setCccdFrontFiles] = useState<any[]>([]);
   const [cccdBackFiles, setCccdBackFiles] = useState<any[]>([]);
@@ -60,6 +59,7 @@ const ApplicationForm: React.FC = () => {
       const trans = files.filter((f: any) => f.file_type === 'TRANSCRIPT');
       const front = files.filter((f: any) => f.file_type === 'CCCD_FRONT');
       const back = files.filter((f: any) => f.file_type === 'CCCD_BACK');
+
       setTranscriptFiles(trans.map((f: any, idx: number) => ({
         uid: `trans-${idx}`,
         name: f.file_url,
@@ -146,6 +146,7 @@ const ApplicationForm: React.FC = () => {
     return Object.values(scores).reduce((sum, val) => sum + val, 0);
   };
 
+  // Hàm lưu nháp (giữ nguyên)
   const handleSaveDraft = async () => {
     try {
       const values = await form.validateFields();
@@ -172,10 +173,12 @@ const ApplicationForm: React.FC = () => {
     }
   };
 
-  const handleSubmit = async () => {
+  // 👇 HÀM NỘP HỒ SƠ GỐC (đã có, giữ nguyên logic)
+  const submitApplication = async () => {
     try {
       const values = await form.validateFields();
       let applicationId = Number(id);
+
       if (!isEdit) {
         const payload = {
           school_id: selectedSchool,
@@ -209,10 +212,33 @@ const ApplicationForm: React.FC = () => {
         await updateMutation.mutateAsync({ id: Number(id), data: payload });
         applicationId = Number(id);
       }
+
       await submitMutation.mutateAsync(applicationId);
+
+      try {
+        await applicationService.sendApplicationEmail(
+          applicationId,
+          'Xác nhận nộp hồ sơ xét tuyển',
+          `Chúc mừng bạn đã nộp hồ sơ xét tuyển thành công.\nMã hồ sơ: ${applicationId}\nTrạng thái: Chờ duyệt.\nChúng tôi sẽ thông báo kết quả sớm nhất.`
+        );
+      } catch (emailError) {
+        console.error('Gửi email thất bại', emailError);
+        message.warning('Hồ sơ đã nộp nhưng không thể gửi email thông báo. Vui lòng kiểm tra lại email cá nhân.');
+      }
     } catch (err) {
       console.error('Nộp hồ sơ thất bại', err);
     }
+  };
+
+  // 👇 HÀM MỚI: hiển thị hộp thoại xác nhận trước khi gọi submitApplication
+  const handleSubmitWithConfirm = () => {
+    Modal.confirm({
+      title: 'Xác nhận nộp hồ sơ',
+      content: 'Bạn chắc chắn muốn nộp hồ sơ? Sau khi nộp bạn không thể sửa hoặc xóa hồ sơ này nữa.',
+      okText: 'Đồng ý nộp',
+      cancelText: 'Hủy',
+      onOk: submitApplication,
+    });
   };
 
   const { data: subjectGroupDetail } = useQuery({
@@ -224,6 +250,7 @@ const ApplicationForm: React.FC = () => {
     },
     enabled: !!selectedSubjectGroup,
   });
+
   const subjects: string[] = subjectGroupDetail?.subjects || [];
 
   if (loadingApp) return <div>Đang tải...</div>;
@@ -289,7 +316,7 @@ const ApplicationForm: React.FC = () => {
           </Select>
         </Form.Item>
 
-        {/* Upload học bạ (TRANSCRIPT) */}
+        {/* Upload học bạ */}
         <Form.Item label="Học bạ (Ảnh hoặc PDF)" required>
           <Upload
             listType="picture-card"
@@ -349,7 +376,8 @@ const ApplicationForm: React.FC = () => {
           <Button onClick={handleSaveDraft} loading={createMutation.isPending || updateMutation.isPending}>
             Lưu nháp
           </Button>
-          <Button type="primary" onClick={handleSubmit} loading={submitMutation.isPending}>
+          {/* 👇 Thay đổi: gọi handleSubmitWithConfirm thay vì handleSubmit trực tiếp */}
+          <Button type="primary" onClick={handleSubmitWithConfirm} loading={submitMutation.isPending}>
             Nộp hồ sơ
           </Button>
         </Space>
