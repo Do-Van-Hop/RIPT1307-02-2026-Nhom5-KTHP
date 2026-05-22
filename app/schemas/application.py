@@ -4,7 +4,6 @@ from datetime import date, datetime
 from app.schemas.file import FileItem, FileResponse
 
 class ApplicationCreate(BaseModel):
-    user_id: int
     school_id: int
     major_id: int
     subject_group_id: int
@@ -34,7 +33,7 @@ class ApplicationResponse(BaseModel):
     subjects: list[str]
 
 class ApplicationDetailResponse(BaseModel):
-
+    user_id: int
     id: int
     school_id: int
     major_id: int

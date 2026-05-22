@@ -31,28 +31,21 @@ const Results: React.FC = () => {
     },
     {
       title: 'Trường',
-      dataIndex: 'school_id',
-      key: 'school_id',
-      render: (schoolId: number, record: any) => {
-        // Nếu API trả về school object thì dùng, không thì hiển thị ID
-        return record.school?.name || `ID: ${schoolId}`;
-      },
+      dataIndex: 'school_name',
+      key: 'school',
+      render: (name: string, record: any) => name || `ID: ${record.school_id}`,
     },
     {
       title: 'Ngành',
-      dataIndex: 'major_id',
-      key: 'major_id',
-      render: (majorId: number, record: any) => {
-        return record.major?.name || `ID: ${majorId}`;
-      },
+      dataIndex: 'major_name',
+      key: 'major',
+      render: (name: string, record: any) => name || `ID: ${record.major_id}`,
     },
     {
       title: 'Tổ hợp',
-      dataIndex: 'subject_group_id',
-      key: 'subject_group_id',
-      render: (groupId: number, record: any) => {
-        return record.subject_group?.name || `ID: ${groupId}`;
-      },
+      dataIndex: 'subject_group_name',
+      key: 'subject_group',
+      render: (name: string, record: any) => name || `ID: ${record.subject_group_id}`,
     },
     {
       title: 'Trạng thái',

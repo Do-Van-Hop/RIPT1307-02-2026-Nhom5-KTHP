@@ -38,19 +38,19 @@ const MyApplications: React.FC = () => {
     { title: 'ID', dataIndex: 'id', key: 'id', width: 70 },
     {
       title: 'Trường',
-      dataIndex: ['school', 'name'],
+      dataIndex: 'school_name',
       key: 'school',
       render: (name: string, record: any) => name || `ID: ${record.school_id}`,
     },
     {
       title: 'Ngành',
-      dataIndex: ['major', 'name'],
+      dataIndex: 'major_name',
       key: 'major',
       render: (name: string, record: any) => name || `ID: ${record.major_id}`,
     },
     {
       title: 'Tổ hợp',
-      dataIndex: ['subjectGroup', 'name'],
+      dataIndex: 'subject_group_name',
       key: 'subjectGroup',
       render: (name: string, record: any) => name || `ID: ${record.subject_group_id}`,
     },

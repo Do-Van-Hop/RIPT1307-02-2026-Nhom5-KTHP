@@ -142,10 +142,9 @@ const ApplicationForm: React.FC = () => {
     }));
   };
 
-  const calculateTotalScore = (scores: Record<string, number>) => {
-    return Object.values(scores).reduce((sum, val) => sum + val, 0);
+  const calculateTotalScore = (scores: Record<string, string | number>) => {
+    return Object.values(scores).reduce((sum: number, val) => sum + (Number(val) || 0), 0);
   };
-
   // Hàm lưu nháp (giữ nguyên)
   const handleSaveDraft = async () => {
     try {

@@ -46,9 +46,9 @@ const ApplicationDetail: React.FC = () => {
         <Descriptions.Item label="Số điện thoại">{data.phone}</Descriptions.Item>
         <Descriptions.Item label="Ngày sinh">{new Date(data.dob).toLocaleDateString('vi-VN')}</Descriptions.Item>
         <Descriptions.Item label="Số CCCD">{data.cccd_number}</Descriptions.Item>
-        <Descriptions.Item label="Trường">{data.school?.name || `ID: ${data.school_id}`}</Descriptions.Item>
-        <Descriptions.Item label="Ngành">{data.major?.name || `ID: ${data.major_id}`}</Descriptions.Item>
-        <Descriptions.Item label="Tổ hợp">{data.subjectGroup?.name || `ID: ${data.subject_group_id}`}</Descriptions.Item>
+        <Descriptions.Item label="Trường">{data.school_name || `ID: ${data.school_id}`}</Descriptions.Item>
+        <Descriptions.Item label="Ngành">{data.major_name || `ID: ${data.major_id}`}</Descriptions.Item>
+        <Descriptions.Item label="Tổ hợp">{data.subject_group_name || `ID: ${data.subject_group_id}`}</Descriptions.Item>
         <Descriptions.Item label="Đối tượng ưu tiên">{data.priority}</Descriptions.Item>
         <Descriptions.Item label="Trạng thái">
           <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
