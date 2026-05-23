@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Table, Button, Space, Modal, Form, Input, Select, Popconfirm, message, Tag, Card, Row, Col,
+  Table, Button, Space, Modal, Form, Input, Select, Popconfirm, message,
+  Tag, Card, Row, Col, Badge, Tooltip, Empty, Divider, Typography,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined, EditOutlined, DeleteOutlined, BankOutlined,
+  BookOutlined, AppstoreOutlined, InfoCircleOutlined, RightOutlined,
+} from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as catalogService from '../../services/catalogService';
 import { useAllMajors } from '../../hooks/useAllMajors';
 
 const { Option } = Select;
+const { Text, Title } = Typography;
 
 interface School {
   id: number;
@@ -25,6 +30,15 @@ interface SubjectGroup {
   name: string;
   subjects: string[];
 }
+
+// ── Màu nhãn tổ hợp môn ──
+const subjectTagColor: Record<string, string> = {
+  'Toán': 'blue', 'Lý': 'geekblue', 'Hóa': 'purple', 'Sinh': 'green',
+  'Văn': 'volcano', 'Sử': 'orange', 'Địa': 'cyan', 'Anh': 'gold',
+  'GDCD': 'lime', 'Tin': 'magenta',
+};
+const getSubjectColor = (s: string) =>
+  subjectTagColor[s] || 'default';
 
 const UnifiedManagement: React.FC = () => {
   const queryClient = useQueryClient();
@@ -82,7 +96,6 @@ const UnifiedManagement: React.FC = () => {
     enabled: !!editingMajor,
   });
 
-  // Cập nhật selectedGroupIds khi mở modal sửa
   useEffect(() => {
     if (currentGroups) {
       setSelectedGroupIds(currentGroups.map(g => g.id));
@@ -91,7 +104,6 @@ const UnifiedManagement: React.FC = () => {
     }
   }, [currentGroups, editingMajor]);
 
-  // Lấy tên trường hiện tại
   const selectedSchoolName = schools?.find(s => s.id === selectedSchoolId)?.name;
 
   // ---------- Mutations (Schools) ----------
@@ -353,30 +365,84 @@ const UnifiedManagement: React.FC = () => {
 
   // ---------- Table Columns ----------
   const schoolColumns = [
-    { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
-    { title: 'Tên trường', dataIndex: 'name', key: 'name' },
     {
-      title: 'Số ngành',
-      key: 'majorCount',
-      render: (_: any, record: School) => majorCountBySchool[record.id] || 0,
+      title: <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">ID</span>,
+      dataIndex: 'id',
+      key: 'id',
+      width: 64,
+      render: (id: number) => (
+        <span className="text-xs font-mono text-gray-400">#{id}</span>
+      ),
     },
     {
-      title: 'Thao tác',
+      title: <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Tên trường</span>,
+      dataIndex: 'name',
+      key: 'name',
+      render: (name: string, record: School) => (
+        <div className="flex items-center gap-2">
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{
+              background: selectedSchoolId === record.id ? '#B30000' : '#f5f5f5',
+              transition: 'background 0.2s',
+            }}
+          >
+            <BankOutlined style={{ fontSize: 13, color: selectedSchoolId === record.id ? '#fff' : '#B30000' }} />
+          </div>
+          <span className="font-medium text-gray-800 text-sm">{name}</span>
+        </div>
+      ),
+    },
+    {
+      title: <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Số ngành</span>,
+      key: 'majorCount',
+      width: 100,
+      render: (_: any, record: School) => {
+        const count = majorCountBySchool[record.id] || 0;
+        return (
+          <Badge
+            count={count}
+            showZero
+            style={{ backgroundColor: count > 0 ? '#B30000' : '#d9d9d9', fontSize: 11 }}
+          />
+        );
+      },
+    },
+    {
+      title: <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Thao tác</span>,
       key: 'action',
+      width: 140,
       render: (_: any, record: School) => (
-        <Space>
-          <Button icon={<EditOutlined />} size="small" onClick={() => handleEditSchool(record)}>
-            Sửa
-          </Button>
+        <Space size={6}>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              icon={<EditOutlined />}
+              size="small"
+              onClick={(e) => { e.stopPropagation(); handleEditSchool(record); }}
+              className="border-0 shadow-none hover:bg-blue-50 hover:text-blue-600 text-gray-500"
+            />
+          </Tooltip>
           <Popconfirm
-            title="Xóa trường sẽ xóa tất cả ngành thuộc trường và các hồ sơ liên quan (nếu có). Tiếp tục?"
-            onConfirm={() => deleteSchoolMutation.mutate(record.id)}
+            title={
+              <div className="max-w-xs">
+                <p className="font-semibold text-gray-800 mb-1">Xóa trường này?</p>
+                <p className="text-xs text-gray-500">Sẽ xóa tất cả ngành thuộc trường và hồ sơ liên quan.</p>
+              </div>
+            }
+            onConfirm={(e) => { e?.stopPropagation(); deleteSchoolMutation.mutate(record.id); }}
             okText="Xóa"
             cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+            icon={<InfoCircleOutlined style={{ color: '#ff4d4f' }} />}
           >
-            <Button icon={<DeleteOutlined />} size="small" danger>
-              Xóa
-            </Button>
+            <Tooltip title="Xóa">
+              <Button
+                icon={<DeleteOutlined />}
+                size="small"
+                onClick={(e) => e.stopPropagation()}
+                className="border-0 shadow-none hover:bg-red-50 hover:text-red-500 text-gray-400"
+              />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -384,25 +450,60 @@ const UnifiedManagement: React.FC = () => {
   ];
 
   const majorColumns = [
-    { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
-    { title: 'Tên ngành', dataIndex: 'name', key: 'name' },
     {
-      title: 'Thao tác',
+      title: <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">ID</span>,
+      dataIndex: 'id',
+      key: 'id',
+      width: 64,
+      render: (id: number) => (
+        <span className="text-xs font-mono text-gray-400">#{id}</span>
+      ),
+    },
+    {
+      title: <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Tên ngành</span>,
+      dataIndex: 'name',
+      key: 'name',
+      render: (name: string) => (
+        <div className="flex items-center gap-2">
+          <BookOutlined className="text-primary" style={{ color: '#B30000', fontSize: 13 }} />
+          <span className="text-sm text-gray-700 font-medium">{name}</span>
+        </div>
+      ),
+    },
+    {
+      title: <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Thao tác</span>,
       key: 'action',
+      width: 120,
       render: (_: any, record: Major) => (
-        <Space>
-          <Button icon={<EditOutlined />} size="small" onClick={() => handleEditMajor(record)}>
-            Sửa
-          </Button>
+        <Space size={6}>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              icon={<EditOutlined />}
+              size="small"
+              onClick={() => handleEditMajor(record)}
+              className="border-0 shadow-none hover:bg-blue-50 hover:text-blue-600 text-gray-500"
+            />
+          </Tooltip>
           <Popconfirm
-            title="Xóa ngành sẽ xóa tất cả mapping tổ hợp và không thể khôi phục. Tiếp tục?"
+            title={
+              <div className="max-w-xs">
+                <p className="font-semibold text-gray-800 mb-1">Xóa ngành này?</p>
+                <p className="text-xs text-gray-500">Xóa tất cả mapping tổ hợp, không thể khôi phục.</p>
+              </div>
+            }
             onConfirm={() => deleteMajorMutation.mutate(record.id)}
             okText="Xóa"
             cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+            icon={<InfoCircleOutlined style={{ color: '#ff4d4f' }} />}
           >
-            <Button icon={<DeleteOutlined />} size="small" danger>
-              Xóa
-            </Button>
+            <Tooltip title="Xóa">
+              <Button
+                icon={<DeleteOutlined />}
+                size="small"
+                className="border-0 shadow-none hover:bg-red-50 hover:text-red-500 text-gray-400"
+              />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -410,149 +511,333 @@ const UnifiedManagement: React.FC = () => {
   ];
 
   const subjectGroupColumns = [
-    { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
-    { title: 'Tên tổ hợp', dataIndex: 'name', key: 'name' },
     {
-      title: 'Môn thi',
-      dataIndex: 'subjects',
-      key: 'subjects',
-      render: (subjects: string[]) => (
-        <>
-          {subjects?.map(subject => (
-            <Tag key={subject}>{subject}</Tag>
-          ))}
-        </>
+      title: <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">ID</span>,
+      dataIndex: 'id',
+      key: 'id',
+      width: 64,
+      render: (id: number) => (
+        <span className="text-xs font-mono text-gray-400">#{id}</span>
       ),
     },
     {
-      title: 'Thao tác',
+      title: <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Tên tổ hợp</span>,
+      dataIndex: 'name',
+      key: 'name',
+      width: 110,
+      render: (name: string) => (
+        <Tag
+          className="font-bold text-sm px-2 py-0.5"
+          style={{ background: '#fff1f0', borderColor: '#ffccc7', color: '#B30000', borderRadius: 6 }}
+        >
+          {name}
+        </Tag>
+      ),
+    },
+    {
+      title: <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Môn thi</span>,
+      dataIndex: 'subjects',
+      key: 'subjects',
+      render: (subjects: string[]) => (
+        <div className="flex flex-wrap gap-1">
+          {subjects?.map(subject => (
+            <Tag key={subject} color={getSubjectColor(subject)} style={{ borderRadius: 4, fontSize: 11 }}>
+              {subject}
+            </Tag>
+          ))}
+        </div>
+      ),
+    },
+    {
+      title: <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Thao tác</span>,
       key: 'action',
+      width: 120,
       render: (_: any, record: SubjectGroup) => (
-        <Space>
-          <Button icon={<EditOutlined />} size="small" onClick={() => handleEditSubjectGroup(record)}>
-            Sửa
-          </Button>
+        <Space size={6}>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              icon={<EditOutlined />}
+              size="small"
+              onClick={() => handleEditSubjectGroup(record)}
+              className="border-0 shadow-none hover:bg-blue-50 hover:text-blue-600 text-gray-500"
+            />
+          </Tooltip>
           <Popconfirm
-            title="Xóa tổ hợp môn sẽ ảnh hưởng đến các ngành và hồ sơ đã dùng. Tiếp tục?"
+            title={
+              <div className="max-w-xs">
+                <p className="font-semibold text-gray-800 mb-1">Xóa tổ hợp môn?</p>
+                <p className="text-xs text-gray-500">Sẽ ảnh hưởng đến các ngành và hồ sơ đã dùng.</p>
+              </div>
+            }
             onConfirm={() => deleteSubjectGroupMutation.mutate(record.id)}
             okText="Xóa"
             cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+            icon={<InfoCircleOutlined style={{ color: '#ff4d4f' }} />}
           >
-            <Button icon={<DeleteOutlined />} size="small" danger>
-              Xóa
-            </Button>
+            <Tooltip title="Xóa">
+              <Button
+                icon={<DeleteOutlined />}
+                size="small"
+                className="border-0 shadow-none hover:bg-red-50 hover:text-red-500 text-gray-400"
+              />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
     },
   ];
 
-  // ---------- Render ----------
   const paginationConfig = {
     pageSize: 5,
     showSizeChanger: false,
     position: ['bottomCenter'] as const,
+    size: 'small' as const,
   };
 
+  // ---------- Shared table props ----------
+  const tableStyles: React.CSSProperties = {
+    borderRadius: 8,
+  };
+
+  // ---------- Render ----------
   return (
-    <div>
-      {/* Phần trên: Danh sách trường */}
-      <Card title="Danh sách trường đại học" style={{ marginBottom: 24 }}>
-        <div style={{ marginBottom: 16, textAlign: 'right' }}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddSchool}>
+    <div className="min-h-screen p-5 md:p-8" style={{ background: '#f7f8fa' }}>
+      {/* ── Page Header ── */}
+      <div className="flex items-center gap-3">
+        <div className="w-1 h-7 bg-[#B30000] rounded-full" />
+        <div>
+          <h1 className="text-xl font-bold text-gray-800 m-0 leading-tight">Quản lý xét tuyển</h1>
+          <p className="text-xs text-gray-400 mt-0.5">Trường - Ngành - Tổ hợp</p>
+        </div>
+      </div>
+      {/* ── Section 1: Danh sách trường ── */}
+      <Card
+        bordered={false}
+        className="shadow-sm mb-5"
+        style={{ borderRadius: 12 }}
+        styles={{ body: { padding: 0 } }}
+      >
+        {/* Card header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <BankOutlined style={{ color: '#B30000', fontSize: 16 }} />
+            <span className="font-semibold text-gray-800 text-sm">Danh sách trường đại học</span>
+            {schools?.length ? (
+              <span className="ml-1 px-2 py-0.5 bg-red-50 text-red-600 text-xs font-semibold rounded-full border border-red-100">
+                {schools.length}
+              </span>
+            ) : null}
+          </div>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            size="small"
+            onClick={handleAddSchool}
+            style={{ background: '#B30000', borderColor: '#B30000', borderRadius: 7 }}
+          >
             Thêm trường
           </Button>
         </div>
-        <Table
-          dataSource={schools}
-          columns={schoolColumns}
-          rowKey="id"
-          loading={loadingSchools}
-          pagination={{ pageSize: 10, showSizeChanger: false }}
-          onRow={(record) => ({
-            onClick: () => setSelectedSchoolId(record.id),
-            style: { cursor: 'pointer', backgroundColor: selectedSchoolId === record.id ? '#e6f7ff' : 'transparent' },
-          })}
-        />
+
+        <div className="px-1">
+          <Table
+            dataSource={schools}
+            columns={schoolColumns}
+            rowKey="id"
+            loading={loadingSchools}
+            pagination={{ pageSize: 10, showSizeChanger: false, size: 'small', position: ['bottomCenter'] }}
+            style={tableStyles}
+            size="middle"
+            onRow={(record) => ({
+              onClick: () => setSelectedSchoolId(record.id),
+              style: {
+                cursor: 'pointer',
+                background: selectedSchoolId === record.id ? '#fff9f9' : 'transparent',
+                borderLeft: selectedSchoolId === record.id ? '3px solid #B30000' : '3px solid transparent',
+                transition: 'all 0.15s ease',
+              },
+            })}
+            rowClassName={(record) =>
+              selectedSchoolId === record.id ? 'ant-table-row-selected' : ''
+            }
+          />
+        </div>
       </Card>
 
-      {/* Phần dưới chia đôi */}
+      {/* ── Section 2: Ngành + Tổ hợp ── */}
       <Row gutter={16} align="stretch">
-        <Col span={12}>
+        {/* Ngành */}
+        <Col xs={24} lg={12}>
           <Card
-            title={
-              <div style={{ textAlign: 'left' }}>
-                Quản lý ngành{selectedSchoolName ? `: ${selectedSchoolName}` : ''}
+            bordered={false}
+            className="shadow-sm h-full"
+            style={{ borderRadius: 12 }}
+            styles={{ body: { padding: 0 } }}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2 min-w-0">
+                <BookOutlined style={{ color: '#B30000', fontSize: 15, flexShrink: 0 }} />
+                <span className="font-semibold text-gray-800 text-sm truncate">
+                  Ngành học
+                  {selectedSchoolName && (
+                    <span className="text-gray-400 font-normal">
+                      {' '}· <span className="text-gray-600">{selectedSchoolName}</span>
+                    </span>
+                  )}
+                </span>
               </div>
-            }
-            extra={
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
+                size="small"
                 onClick={handleAddMajor}
                 disabled={!selectedSchoolId}
+                style={{
+                  background: selectedSchoolId ? '#B30000' : undefined,
+                  borderColor: selectedSchoolId ? '#B30000' : undefined,
+                  borderRadius: 7,
+                  flexShrink: 0,
+                }}
               >
                 Thêm ngành
               </Button>
-            }
-            style={{ height: '100%' }}
-          >
-            {!selectedSchoolId ? (
-              <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
-                Vui lòng chọn một trường ở trên để quản lý ngành
-              </div>
-            ) : (
-              <Table
-                dataSource={majors}
-                columns={majorColumns}
-                rowKey="id"
-                loading={loadingMajors}
-                pagination={paginationConfig}
-                scroll={{ y: 300 }}
-              />
-            )}
+            </div>
+
+            <div className="px-1">
+              {!selectedSchoolId ? (
+                <div className="py-14 flex flex-col items-center gap-3 text-center">
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                    style={{ background: '#fff1f0' }}
+                  >
+                    <RightOutlined style={{ color: '#B30000', fontSize: 18 }} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 mb-0.5">Chọn trường để xem ngành</p>
+                    <p className="text-xs text-gray-400">Nhấp vào một hàng trong bảng trường ở trên</p>
+                  </div>
+                </div>
+              ) : (
+                <Table
+                  dataSource={majors}
+                  columns={majorColumns}
+                  rowKey="id"
+                  loading={loadingMajors}
+                  pagination={paginationConfig}
+                  scroll={{ y: 280 }}
+                  style={tableStyles}
+                  size="middle"
+                  locale={{ emptyText: <Empty description="Chưa có ngành nào" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+                />
+              )}
+            </div>
           </Card>
         </Col>
-        <Col span={12}>
+
+        {/* Tổ hợp môn */}
+        <Col xs={24} lg={12}>
           <Card
-            title={<div style={{ textAlign: 'left' }}>Quản lý tổ hợp môn</div>}
-            extra={
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleAddSubjectGroup}>
+            bordered={false}
+            className="shadow-sm h-full"
+            style={{ borderRadius: 12 }}
+            styles={{ body: { padding: 0 } }}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <AppstoreOutlined style={{ color: '#B30000', fontSize: 15 }} />
+                <span className="font-semibold text-gray-800 text-sm">Tổ hợp môn</span>
+                {subjectGroups?.length ? (
+                  <span className="ml-1 px-2 py-0.5 bg-red-50 text-red-600 text-xs font-semibold rounded-full border border-red-100">
+                    {subjectGroups.length}
+                  </span>
+                ) : null}
+              </div>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                size="small"
+                onClick={handleAddSubjectGroup}
+                style={{ background: '#B30000', borderColor: '#B30000', borderRadius: 7 }}
+              >
                 Thêm tổ hợp
               </Button>
-            }
-            style={{ height: '100%' }}
-          >
-            <Table
-              dataSource={subjectGroups}
-              columns={subjectGroupColumns}
-              rowKey="id"
-              loading={loadingSubjectGroups}
-              pagination={paginationConfig}
-              scroll={{ y: 300 }}
-            />
+            </div>
+
+            <div className="px-1">
+              <Table
+                dataSource={subjectGroups}
+                columns={subjectGroupColumns}
+                rowKey="id"
+                loading={loadingSubjectGroups}
+                pagination={paginationConfig}
+                scroll={{ y: 280 }}
+                style={tableStyles}
+                size="middle"
+                locale={{ emptyText: <Empty description="Chưa có tổ hợp nào" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+              />
+            </div>
           </Card>
         </Col>
       </Row>
 
-      {/* Modal Thêm/Sửa Trường */}
+      {/* ── Modal: Trường ── */}
       <Modal
-        title={editingSchool ? 'Sửa trường' : 'Thêm trường mới'}
+        title={
+          <div className="flex items-center gap-2 pb-1">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: '#fff1f0' }}
+            >
+              <BankOutlined style={{ color: '#B30000', fontSize: 14 }} />
+            </div>
+            <span className="font-semibold text-gray-800">
+              {editingSchool ? 'Chỉnh sửa trường' : 'Thêm trường mới'}
+            </span>
+          </div>
+        }
         open={isSchoolModalOpen}
         onOk={handleSchoolSubmit}
         onCancel={() => setIsSchoolModalOpen(false)}
         confirmLoading={createSchoolMutation.isPending || updateSchoolMutation.isPending}
+        okText={editingSchool ? 'Lưu thay đổi' : 'Thêm trường'}
+        cancelText="Hủy"
+        okButtonProps={{ style: { background: '#B30000', borderColor: '#B30000' } }}
+        width={440}
+        styles={{ header: { borderBottom: '1px solid #f0f0f0', paddingBottom: 12, marginBottom: 0 } }}
       >
-        <Form form={schoolForm} layout="vertical">
-          <Form.Item name="name" label="Tên trường" rules={[{ required: true, message: 'Vui lòng nhập tên trường' }]}>
-            <Input />
-          </Form.Item>
-        </Form>
+        <div className="pt-4">
+          <Form form={schoolForm} layout="vertical" requiredMark={false}>
+            <Form.Item
+              name="name"
+              label={<span className="text-sm font-medium text-gray-700">Tên trường</span>}
+              rules={[{ required: true, message: 'Vui lòng nhập tên trường' }]}
+            >
+              <Input
+                placeholder="VD: Đại học Bách Khoa Hà Nội"
+                size="large"
+                style={{ borderRadius: 8 }}
+              />
+            </Form.Item>
+          </Form>
+        </div>
       </Modal>
 
-      {/* Modal Thêm/Sửa Ngành */}
+      {/* ── Modal: Ngành ── */}
       <Modal
-        title={editingMajor ? 'Sửa ngành' : 'Thêm ngành mới'}
+        title={
+          <div className="flex items-center gap-2 pb-1">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: '#fff1f0' }}
+            >
+              <BookOutlined style={{ color: '#B30000', fontSize: 14 }} />
+            </div>
+            <span className="font-semibold text-gray-800">
+              {editingMajor ? 'Chỉnh sửa ngành' : 'Thêm ngành mới'}
+            </span>
+          </div>
+        }
         open={isMajorModalOpen}
         onOk={handleMajorSubmit}
         onCancel={() => {
@@ -562,54 +847,121 @@ const UnifiedManagement: React.FC = () => {
           setSelectedGroupIds([]);
         }}
         confirmLoading={createMajorMutation.isPending || updateMajorMutation.isPending}
-        width={600}
+        okText={editingMajor ? 'Lưu thay đổi' : 'Thêm ngành'}
+        cancelText="Hủy"
+        okButtonProps={{ style: { background: '#B30000', borderColor: '#B30000' } }}
+        width={560}
+        styles={{ header: { borderBottom: '1px solid #f0f0f0', paddingBottom: 12, marginBottom: 0 } }}
       >
-        <Form form={majorForm} layout="vertical" initialValues={{ subjectGroupIds: [] }}>
-          <Form.Item name="name" label="Tên ngành" rules={[{ required: true, message: 'Vui lòng nhập tên ngành' }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="schoolId" label="Trường" rules={[{ required: true }]}>
-            <Select
-              options={schools?.map(s => ({ value: s.id, label: s.name }))}
-              placeholder="Chọn trường"
-              disabled={!!editingMajor}
-            />
-          </Form.Item>
-          <Form.Item
-            name="subjectGroupIds"
-            label="Tổ hợp xét tuyển (chọn nhiều)"
-            rules={[{ required: editingMajor ? false : true, message: 'Chọn ít nhất một tổ hợp' }]}
-          >
-            <Select
-              mode="multiple"
-              placeholder="Chọn tổ hợp môn"
-              onChange={handleMajorGroupChange}
-              value={editingMajor ? selectedGroupIds : undefined}
-              options={subjectGroups?.map(sg => ({
-                value: sg.id,
-                label: `${sg.name} (${sg.subjects.join(', ')})`,
-              }))}
-            />
-          </Form.Item>
-        </Form>
+        <div className="pt-4">
+          <Form form={majorForm} layout="vertical" requiredMark={false} initialValues={{ subjectGroupIds: [] }}>
+            <Form.Item
+              name="name"
+              label={<span className="text-sm font-medium text-gray-700">Tên ngành</span>}
+              rules={[{ required: true, message: 'Vui lòng nhập tên ngành' }]}
+            >
+              <Input
+                placeholder="VD: Kỹ thuật phần mềm"
+                size="large"
+                style={{ borderRadius: 8 }}
+              />
+            </Form.Item>
+            <Form.Item
+              name="schoolId"
+              label={<span className="text-sm font-medium text-gray-700">Trường</span>}
+              rules={[{ required: true, message: 'Vui lòng chọn trường' }]}
+            >
+              <Select
+                options={schools?.map(s => ({ value: s.id, label: s.name }))}
+                placeholder="Chọn trường"
+                disabled={!!editingMajor}
+                size="large"
+                style={{ borderRadius: 8 }}
+              />
+            </Form.Item>
+            <Form.Item
+              name="subjectGroupIds"
+              label={
+                <span className="text-sm font-medium text-gray-700">
+                  Tổ hợp xét tuyển
+                  <span className="ml-1 text-xs text-gray-400 font-normal">(chọn nhiều)</span>
+                </span>
+              }
+              rules={[{ required: !editingMajor, message: 'Chọn ít nhất một tổ hợp' }]}
+            >
+              <Select
+                mode="multiple"
+                placeholder="Chọn tổ hợp môn"
+                onChange={handleMajorGroupChange}
+                value={editingMajor ? selectedGroupIds : undefined}
+                size="large"
+                style={{ borderRadius: 8 }}
+                options={subjectGroups?.map(sg => ({
+                  value: sg.id,
+                  label: `${sg.name} (${sg.subjects.join(', ')})`,
+                }))}
+              />
+            </Form.Item>
+          </Form>
+        </div>
       </Modal>
 
-      {/* Modal Thêm/Sửa Tổ hợp môn */}
+      {/* ── Modal: Tổ hợp môn ── */}
       <Modal
-        title={editingSubjectGroup ? 'Sửa tổ hợp môn' : 'Thêm tổ hợp môn mới'}
+        title={
+          <div className="flex items-center gap-2 pb-1">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: '#fff1f0' }}
+            >
+              <AppstoreOutlined style={{ color: '#B30000', fontSize: 14 }} />
+            </div>
+            <span className="font-semibold text-gray-800">
+              {editingSubjectGroup ? 'Chỉnh sửa tổ hợp môn' : 'Thêm tổ hợp môn mới'}
+            </span>
+          </div>
+        }
         open={isSubjectGroupModalOpen}
         onOk={handleSubjectGroupSubmit}
         onCancel={() => setIsSubjectGroupModalOpen(false)}
         confirmLoading={createSubjectGroupMutation.isPending || updateSubjectGroupMutation.isPending}
+        okText={editingSubjectGroup ? 'Lưu thay đổi' : 'Thêm tổ hợp'}
+        cancelText="Hủy"
+        okButtonProps={{ style: { background: '#B30000', borderColor: '#B30000' } }}
+        width={440}
+        styles={{ header: { borderBottom: '1px solid #f0f0f0', paddingBottom: 12, marginBottom: 0 } }}
       >
-        <Form form={subjectGroupForm} layout="vertical">
-          <Form.Item name="name" label="Tên tổ hợp" rules={[{ required: true, message: 'Vui lòng nhập tên tổ hợp' }]}>
-            <Input placeholder="Ví dụ: A00" />
-          </Form.Item>
-          <Form.Item name="subjects" label="Danh sách môn (cách nhau bởi dấu phẩy)" rules={[{ required: true, message: 'Vui lòng nhập ít nhất một môn' }]}>
-            <Input placeholder="Toán, Lý, Hóa" />
-          </Form.Item>
-        </Form>
+        <div className="pt-4">
+          <Form form={subjectGroupForm} layout="vertical" requiredMark={false}>
+            <Form.Item
+              name="name"
+              label={<span className="text-sm font-medium text-gray-700">Mã tổ hợp</span>}
+              rules={[{ required: true, message: 'Vui lòng nhập tên tổ hợp' }]}
+            >
+              <Input
+                placeholder="VD: A00, B00, D01..."
+                size="large"
+                style={{ borderRadius: 8 }}
+              />
+            </Form.Item>
+            <Form.Item
+              name="subjects"
+              label={
+                <span className="text-sm font-medium text-gray-700">
+                  Môn thi
+                  <span className="ml-1 text-xs text-gray-400 font-normal">(cách nhau bởi dấu phẩy)</span>
+                </span>
+              }
+              rules={[{ required: true, message: 'Vui lòng nhập ít nhất một môn' }]}
+            >
+              <Input
+                placeholder="VD: Toán, Lý, Hóa"
+                size="large"
+                style={{ borderRadius: 8 }}
+              />
+            </Form.Item>
+          </Form>
+        </div>
       </Modal>
     </div>
   );

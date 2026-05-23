@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Input, Button, Select, Upload, message, Space, Card, DatePicker, Modal } from 'antd'; // 👈 thêm Modal vào import
-import { PlusOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Select, Upload, message, Space, DatePicker, Modal, Skeleton } from 'antd';
+import {
+  PlusOutlined, ArrowLeftOutlined, SaveOutlined, SendOutlined,
+  UserOutlined, PhoneOutlined, IdcardOutlined, CalendarOutlined,
+  BankOutlined, StarOutlined, FileTextOutlined, IdcardFilled,
+} from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -16,6 +20,35 @@ const priorityMap: Record<string, number> = {
   'KV2-NT': 3,
   KV3: 4,
 };
+
+/* ─── Section wrapper ─── */
+interface SectionProps {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  step: number;
+}
+
+const Section: React.FC<SectionProps> = ({ title, icon, children, step }) => (
+  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-gray-50/60">
+      <div className="w-7 h-7 rounded-lg bg-[#B30000] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+        {step}
+      </div>
+      <span className="text-[#B30000] text-base flex-shrink-0">{icon}</span>
+      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide m-0">{title}</h3>
+    </div>
+    <div className="p-5 space-y-0">{children}</div>
+  </div>
+);
+
+/* ─── Upload box label ─── */
+const UploadHint: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
+    <span className="inline-block w-1 h-1 rounded-full bg-gray-300" />
+    {children}
+  </p>
+);
 
 const ApplicationForm: React.FC = () => {
   const { id } = useParams();
@@ -58,29 +91,11 @@ const ApplicationForm: React.FC = () => {
       const files = existingApp.files || [];
       const trans = files.filter((f: any) => f.file_type === 'TRANSCRIPT');
       const front = files.filter((f: any) => f.file_type === 'CCCD_FRONT');
-      const back = files.filter((f: any) => f.file_type === 'CCCD_BACK');
+      const back  = files.filter((f: any) => f.file_type === 'CCCD_BACK');
 
-      setTranscriptFiles(trans.map((f: any, idx: number) => ({
-        uid: `trans-${idx}`,
-        name: f.file_url,
-        status: 'done',
-        url: f.file_url,
-        file_type: f.file_type,
-      })));
-      setCccdFrontFiles(front.map((f: any, idx: number) => ({
-        uid: `front-${idx}`,
-        name: f.file_url,
-        status: 'done',
-        url: f.file_url,
-        file_type: f.file_type,
-      })));
-      setCccdBackFiles(back.map((f: any, idx: number) => ({
-        uid: `back-${idx}`,
-        name: f.file_url,
-        status: 'done',
-        url: f.file_url,
-        file_type: f.file_type,
-      })));
+      setTranscriptFiles(trans.map((f: any, idx: number) => ({ uid: `trans-${idx}`, name: f.file_url, status: 'done', url: f.file_url, file_type: f.file_type })));
+      setCccdFrontFiles(front.map((f: any, idx: number) => ({ uid: `front-${idx}`, name: f.file_url, status: 'done', url: f.file_url, file_type: f.file_type })));
+      setCccdBackFiles(back.map((f: any, idx: number)  => ({ uid: `back-${idx}`,  name: f.file_url, status: 'done', url: f.file_url, file_type: f.file_type })));
     }
   }, [existingApp, form]);
 
@@ -94,8 +109,7 @@ const ApplicationForm: React.FC = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
-      applicationService.updateApplication(id, data),
+    mutationFn: ({ id, data }: { id: number; data: any }) => applicationService.updateApplication(id, data),
     onSuccess: () => {
       message.success('Cập nhật hồ sơ thành công');
       queryClient.invalidateQueries({ queryKey: ['myApplications'] });
@@ -117,16 +131,10 @@ const ApplicationForm: React.FC = () => {
     try {
       const res = await applicationService.uploadFile(file, type);
       const url = res.data.file_url;
-      const newFile = {
-        uid: `${type}-${Date.now()}`,
-        name: file.name,
-        status: 'done',
-        url,
-        file_type: type,
-      };
+      const newFile = { uid: `${type}-${Date.now()}`, name: file.name, status: 'done', url, file_type: type };
       if (type === 'TRANSCRIPT') setTranscriptFiles(prev => [...prev, newFile]);
       if (type === 'CCCD_FRONT') setCccdFrontFiles(prev => [...prev, newFile]);
-      if (type === 'CCCD_BACK') setCccdBackFiles(prev => [...prev, newFile]);
+      if (type === 'CCCD_BACK')  setCccdBackFiles(prev => [...prev, newFile]);
       message.success('Tải lên thành công');
     } catch {
       message.error('Tải lên thất bại');
@@ -134,33 +142,21 @@ const ApplicationForm: React.FC = () => {
     return false;
   };
 
-  const buildFilesPayload = () => {
-    const allFiles = [...transcriptFiles, ...cccdFrontFiles, ...cccdBackFiles];
-    return allFiles.map(f => ({
-      file_url: f.url,
-      file_type: f.file_type,
-    }));
-  };
+  const buildFilesPayload = () =>
+    [...transcriptFiles, ...cccdFrontFiles, ...cccdBackFiles].map(f => ({ file_url: f.url, file_type: f.file_type }));
 
-  const calculateTotalScore = (scores: Record<string, string | number>) => {
-    return Object.values(scores).reduce((sum: number, val) => sum + (Number(val) || 0), 0);
-  };
-  // Hàm lưu nháp (giữ nguyên)
+  const calculateTotalScore = (scores: Record<string, string | number>) =>
+    Object.values(scores).reduce((sum: number, val) => sum + (Number(val) || 0), 0);
+
   const handleSaveDraft = async () => {
     try {
       const values = await form.validateFields();
       const payload = {
-        school_id: selectedSchool,
-        major_id: selectedMajor,
-        subject_group_id: selectedSubjectGroup,
-        full_name: values.fullName,
-        dob: values.dob ? values.dob.format('YYYY-MM-DD') : null,
-        phone: values.phone,
-        cccd_number: values.cccdNumber,
+        school_id: selectedSchool, major_id: selectedMajor, subject_group_id: selectedSubjectGroup,
+        full_name: values.fullName, dob: values.dob ? values.dob.format('YYYY-MM-DD') : null,
+        phone: values.phone, cccd_number: values.cccdNumber,
         score: values.scores ? calculateTotalScore(values.scores) : 0,
-        scores: values.scores,
-        priority: priorityMap[values.priority],
-        files: buildFilesPayload(),
+        scores: values.scores, priority: priorityMap[values.priority], files: buildFilesPayload(),
       };
       if (isEdit && id) {
         await updateMutation.mutateAsync({ id: Number(id), data: payload });
@@ -172,71 +168,38 @@ const ApplicationForm: React.FC = () => {
     }
   };
 
-  // 👇 HÀM NỘP HỒ SƠ GỐC (đã có, giữ nguyên logic)
   const submitApplication = async () => {
     try {
       const values = await form.validateFields();
       let applicationId = Number(id);
-
+      const payload = {
+        school_id: selectedSchool, major_id: selectedMajor, subject_group_id: selectedSubjectGroup,
+        full_name: values.fullName, dob: values.dob ? values.dob.format('YYYY-MM-DD') : null,
+        phone: values.phone, cccd_number: values.cccdNumber,
+        score: values.scores ? calculateTotalScore(values.scores) : 0,
+        scores: values.scores, priority: priorityMap[values.priority], files: buildFilesPayload(),
+      };
+      console.log('Payload nộp hồ sơ:', payload);
       if (!isEdit) {
-        const payload = {
-          school_id: selectedSchool,
-          major_id: selectedMajor,
-          subject_group_id: selectedSubjectGroup,
-          full_name: values.fullName,
-          dob: values.dob ? values.dob.format('YYYY-MM-DD') : null,
-          phone: values.phone,
-          cccd_number: values.cccdNumber,
-          score: values.scores ? calculateTotalScore(values.scores) : 0,
-          scores: values.scores,
-          priority: priorityMap[values.priority],
-          files: buildFilesPayload(),
-        };
-        console.log('Payload nộp hồ sơ:', payload);
         const res = await createMutation.mutateAsync(payload);
         applicationId = res.data.id;
       } else {
-        const payload = {
-          school_id: selectedSchool,
-          major_id: selectedMajor,
-          subject_group_id: selectedSubjectGroup,
-          full_name: values.fullName,
-          dob: values.dob ? values.dob.format('YYYY-MM-DD') : null,
-          phone: values.phone,
-          cccd_number: values.cccdNumber,
-          score: values.scores ? calculateTotalScore(values.scores) : 0,
-          scores: values.scores,
-          priority: priorityMap[values.priority],
-          files: buildFilesPayload(),
-        };
-        console.log('Payload nộp hồ sơ:', payload);
         await updateMutation.mutateAsync({ id: Number(id), data: payload });
         applicationId = Number(id);
       }
-
       await submitMutation.mutateAsync(applicationId);
-      try {
-        await applicationService.sendApplicationEmail(
-          applicationId,
-          'Xác nhận nộp hồ sơ xét tuyển',
-          `Chúc mừng bạn đã nộp hồ sơ xét tuyển thành công.\nMã hồ sơ: ${applicationId}\nTrạng thái: Chờ duyệt.\nChúng tôi sẽ thông báo kết quả sớm nhất.`
-        );
-      } catch (emailError) {
-        console.error('Gửi email thất bại', emailError);
-        message.warning('Hồ sơ đã nộp nhưng không thể gửi email thông báo. Vui lòng kiểm tra lại email cá nhân.');
-      }
     } catch (err) {
       console.error('Nộp hồ sơ thất bại', err);
     }
   };
 
-  // 👇 HÀM MỚI: hiển thị hộp thoại xác nhận trước khi gọi submitApplication
   const handleSubmitWithConfirm = () => {
     Modal.confirm({
       title: 'Xác nhận nộp hồ sơ',
       content: 'Bạn chắc chắn muốn nộp hồ sơ? Sau khi nộp bạn không thể sửa hoặc xóa hồ sơ này nữa.',
       okText: 'Đồng ý nộp',
       cancelText: 'Hủy',
+      okButtonProps: { className: '!bg-[#B30000] !border-[#B30000] hover:!bg-[#E60000]' },
       onOk: submitApplication,
     });
   };
@@ -253,136 +216,273 @@ const ApplicationForm: React.FC = () => {
 
   const subjects: string[] = subjectGroupDetail?.subjects || [];
 
-  if (loadingApp) return <div>Đang tải...</div>;
+  /* ── Loading ── */
+  if (loadingApp) {
+    return (
+      <div className="min-h-screen bg-gray-50/80 p-4 md:p-6">
+        <div className="max-w-2xl mx-auto space-y-4">
+          <Skeleton active paragraph={{ rows: 2 }} />
+          <Skeleton active paragraph={{ rows: 5 }} />
+          <Skeleton active paragraph={{ rows: 4 }} />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <Card title={isEdit ? 'Sửa hồ sơ' : 'Tạo hồ sơ mới'} style={{ maxWidth: 900, margin: '0 auto' }}>
-      <Form form={form} layout="vertical">
-        {/* Thông tin cá nhân */}
-        <Card title="Thông tin cá nhân" size="small" style={{ marginBottom: 24 }}>
-          <Form.Item name="fullName" label="Họ và tên" rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}>
-            <Input placeholder="Nguyễn Văn A" />
-          </Form.Item>
-          <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}>
-            <Input placeholder="0123456789" />
-          </Form.Item>
-          <Form.Item name="dob" label="Ngày sinh" rules={[{ required: true, message: 'Vui lòng chọn ngày sinh' }]}>
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} placeholder="Chọn ngày sinh" />
-          </Form.Item>
-          <Form.Item name="cccdNumber" label="Số CCCD" rules={[{ required: true, message: 'Vui lòng nhập số CCCD' }]}>
-            <Input placeholder="079123456789" />
-          </Form.Item>
-        </Card>
+    <div className="min-h-screen bg-gray-50/80 p-4 md:p-6">
+      <div className="max-w-2xl mx-auto space-y-5">
 
-        {/* Chọn trường - ngành - tổ hợp */}
-        <Form.Item label="Trường - Ngành - Tổ hợp" required>
-          <CandidateCascader
-            onSelect={(schoolId, majorId, subjectGroupId) => {
-              setSelectedSchool(schoolId);
-              setSelectedMajor(majorId);
-              setSelectedSubjectGroup(subjectGroupId);
-            }}
-            initialSchoolId={selectedSchool || undefined}
-            initialMajorId={selectedMajor || undefined}
-            initialSubjectGroupId={selectedSubjectGroup || undefined}
-          />
-        </Form.Item>
+        {/* ── Header ── */}
+        <div className="flex items-center gap-3">
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate('/candidate/applications')}
+            className="!rounded-xl !border-gray-200 hover:!border-[#B30000] hover:!text-[#B30000]"
+          >
+            Quay lại
+          </Button>
+          <div className="w-px h-6 bg-gray-200" />
+          <div>
+            <h1 className="text-xl font-bold text-gray-800 m-0 leading-tight">
+              {isEdit ? 'Chỉnh sửa hồ sơ' : 'Tạo hồ sơ mới'}
+            </h1>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {isEdit ? `Đang chỉnh sửa hồ sơ #${id}` : 'Điền đầy đủ thông tin để nộp hồ sơ xét tuyển'}
+            </p>
+          </div>
+        </div>
 
-        {/* Điểm các môn */}
-        {subjects.length > 0 && (
-          <Form.Item label="Điểm các môn" required>
-            <Space wrap>
-              {subjects.map(subject => (
-                <Form.Item
-                  key={subject}
-                  name={['scores', subject]}
-                  label={subject}
-                  rules={[{ required: true, message: `Nhập điểm ${subject}` }]}
+        {/* ── Form ── */}
+        <Form form={form} layout="vertical" requiredMark={false}>
+
+          {/* 1. Thông tin cá nhân */}
+          <Section step={1} title="Thông tin cá nhân" icon={<UserOutlined />}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+              <Form.Item
+                name="fullName"
+                label={<span className="text-sm font-medium text-gray-600">Họ và tên</span>}
+                rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}
+              >
+                <Input
+                  prefix={<UserOutlined className="text-gray-300" />}
+                  placeholder="Nguyễn Văn A"
+                  className="!rounded-xl"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="phone"
+                label={<span className="text-sm font-medium text-gray-600">Số điện thoại</span>}
+                rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
+              >
+                <Input
+                  prefix={<PhoneOutlined className="text-gray-300" />}
+                  placeholder="0123456789"
+                  className="!rounded-xl"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="dob"
+                label={<span className="text-sm font-medium text-gray-600">Ngày sinh</span>}
+                rules={[{ required: true, message: 'Vui lòng chọn ngày sinh' }]}
+              >
+                <DatePicker
+                  format="DD/MM/YYYY"
+                  placeholder="Chọn ngày sinh"
+                  className="!rounded-xl !w-full"
+                  suffixIcon={<CalendarOutlined className="text-gray-300" />}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="cccdNumber"
+                label={<span className="text-sm font-medium text-gray-600">Số CCCD</span>}
+                rules={[{ required: true, message: 'Vui lòng nhập số CCCD' }]}
+              >
+                <Input
+                  prefix={<IdcardOutlined className="text-gray-300" />}
+                  placeholder="079123456789"
+                  className="!rounded-xl"
+                />
+              </Form.Item>
+            </div>
+          </Section>
+
+          {/* 2. Thông tin xét tuyển */}
+          <div className="mt-5">
+            <Section step={2} title="Trường – Ngành – Tổ hợp" icon={<BankOutlined />}>
+              <Form.Item
+                label={<span className="text-sm font-medium text-gray-600">Chọn Trường / Ngành / Tổ hợp môn</span>}
+                required
+              >
+                <CandidateCascader
+                  onSelect={(schoolId, majorId, subjectGroupId) => {
+                    setSelectedSchool(schoolId);
+                    setSelectedMajor(majorId);
+                    setSelectedSubjectGroup(subjectGroupId);
+                  }}
+                  initialSchoolId={selectedSchool || undefined}
+                  initialMajorId={selectedMajor || undefined}
+                  initialSubjectGroupId={selectedSubjectGroup || undefined}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="priority"
+                label={<span className="text-sm font-medium text-gray-600">Đối tượng ưu tiên</span>}
+                rules={[{ required: true, message: 'Vui lòng chọn đối tượng ưu tiên' }]}
+              >
+                <Select
+                  placeholder="Chọn khu vực ưu tiên"
+                  className="!rounded-xl"
+                  suffixIcon={<StarOutlined className="text-gray-300" />}
                 >
-                  <Input type="number" min={0} max={10} step={0.25} style={{ width: 100 }} />
-                </Form.Item>
-              ))}
-            </Space>
-          </Form.Item>
-        )}
+                  <Option value="KV1">Khu vực 1</Option>
+                  <Option value="KV2">Khu vực 2</Option>
+                  <Option value="KV2-NT">Khu vực 2 – Nông thôn</Option>
+                  <Option value="KV3">Khu vực 3</Option>
+                </Select>
+              </Form.Item>
+            </Section>
+          </div>
 
-        {/* Đối tượng ưu tiên */}
-        <Form.Item name="priority" label="Đối tượng ưu tiên" rules={[{ required: true }]}>
-          <Select placeholder="Chọn đối tượng">
-            <Option value="KV1">Khu vực 1</Option>
-            <Option value="KV2">Khu vực 2</Option>
-            <Option value="KV2-NT">Khu vực 2 - Nông thôn</Option>
-            <Option value="KV3">Khu vực 3</Option>
-          </Select>
-        </Form.Item>
+          {/* 3. Điểm các môn */}
+          {subjects.length > 0 && (
+            <div className="mt-5">
+              <Section step={3} title="Bảng điểm" icon={<StarOutlined />}>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+                  {subjects.map(subject => (
+                    <Form.Item
+                      key={subject}
+                      name={['scores', subject]}
+                      label={<span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{subject}</span>}
+                      rules={[{ required: true, message: `Nhập điểm ${subject}` }]}
+                      className="!mb-2"
+                    >
+                      <Input
+                        type="number"
+                        min={0}
+                        max={10}
+                        step={0.25}
+                        placeholder="0 – 10"
+                        className="!rounded-xl !text-center !font-bold !text-[#B30000]"
+                      />
+                    </Form.Item>
+                  ))}
+                </div>
+              </Section>
+            </div>
+          )}
 
-        {/* Upload học bạ */}
-        <Form.Item label="Học bạ (Ảnh hoặc PDF)" required>
-          <Upload
-            listType="picture-card"
-            fileList={transcriptFiles}
-            onRemove={(file) => setTranscriptFiles(prev => prev.filter(f => f.uid !== file.uid))}
-            beforeUpload={(file) => handleUpload(file, 'TRANSCRIPT')}
-            accept="image/*,application/pdf"
-          >
-            {transcriptFiles.length < 5 && (
-              <div>
-                <PlusOutlined />
-                <div style={{ marginTop: 8 }}>Tải lên</div>
+          {/* 4. Minh chứng */}
+          <div className="mt-5">
+            <Section step={subjects.length > 0 ? 4 : 3} title="Minh chứng đính kèm" icon={<FileTextOutlined />}>
+
+              {/* Học bạ */}
+              <div className="mb-5">
+                <p className="text-sm font-medium text-gray-600 mb-2">Học bạ / Bảng điểm</p>
+                <Upload
+                  listType="picture-card"
+                  fileList={transcriptFiles}
+                  onRemove={(file) => setTranscriptFiles(prev => prev.filter(f => f.uid !== file.uid))}
+                  beforeUpload={(file) => handleUpload(file, 'TRANSCRIPT')}
+                  accept="image/*,application/pdf"
+                  className="upload-list-inline"
+                >
+                  {transcriptFiles.length < 5 && (
+                    <div className="flex flex-col items-center gap-1 text-gray-400">
+                      <PlusOutlined className="text-lg" />
+                      <span className="text-xs">Tải lên</span>
+                    </div>
+                  )}
+                </Upload>
+                <UploadHint>Tối đa 5 file · Ảnh hoặc PDF</UploadHint>
               </div>
-            )}
-          </Upload>
-          <div style={{ fontSize: 12, color: '#888' }}>Tối đa 5 file (học bạ, bảng điểm,...)</div>
-        </Form.Item>
 
-        {/* Upload CCCD mặt trước */}
-        <Form.Item label="CCCD mặt trước" required>
-          <Upload
-            listType="picture-card"
-            fileList={cccdFrontFiles}
-            onRemove={(file) => setCccdFrontFiles(prev => prev.filter(f => f.uid !== file.uid))}
-            beforeUpload={(file) => handleUpload(file, 'CCCD_FRONT')}
-            accept="image/*,application/pdf"
-          >
-            {cccdFrontFiles.length < 1 && (
-              <div>
-                <PlusOutlined />
-                <div style={{ marginTop: 8 }}>Tải lên</div>
+              {/* CCCD */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-2 flex items-center gap-1.5">
+                    <IdcardFilled className="text-[#B30000] text-xs" /> CCCD mặt trước
+                  </p>
+                  <Upload
+                    listType="picture-card"
+                    fileList={cccdFrontFiles}
+                    onRemove={(file) => setCccdFrontFiles(prev => prev.filter(f => f.uid !== file.uid))}
+                    beforeUpload={(file) => handleUpload(file, 'CCCD_FRONT')}
+                    accept="image/*,application/pdf"
+                  >
+                    {cccdFrontFiles.length < 1 && (
+                      <div className="flex flex-col items-center gap-1 text-gray-400">
+                        <PlusOutlined className="text-lg" />
+                        <span className="text-xs">Tải lên</span>
+                      </div>
+                    )}
+                  </Upload>
+                  <UploadHint>1 ảnh rõ nét, đủ 4 góc</UploadHint>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-2 flex items-center gap-1.5">
+                    <IdcardFilled className="text-[#0038F7] text-xs" /> CCCD mặt sau
+                  </p>
+                  <Upload
+                    listType="picture-card"
+                    fileList={cccdBackFiles}
+                    onRemove={(file) => setCccdBackFiles(prev => prev.filter(f => f.uid !== file.uid))}
+                    beforeUpload={(file) => handleUpload(file, 'CCCD_BACK')}
+                    accept="image/*,application/pdf"
+                  >
+                    {cccdBackFiles.length < 1 && (
+                      <div className="flex flex-col items-center gap-1 text-gray-400">
+                        <PlusOutlined className="text-lg" />
+                        <span className="text-xs">Tải lên</span>
+                      </div>
+                    )}
+                  </Upload>
+                  <UploadHint>1 ảnh rõ nét, đủ 4 góc</UploadHint>
+                </div>
               </div>
-            )}
-          </Upload>
-        </Form.Item>
+            </Section>
+          </div>
 
-        {/* Upload CCCD mặt sau */}
-        <Form.Item label="CCCD mặt sau" required>
-          <Upload
-            listType="picture-card"
-            fileList={cccdBackFiles}
-            onRemove={(file) => setCccdBackFiles(prev => prev.filter(f => f.uid !== file.uid))}
-            beforeUpload={(file) => handleUpload(file, 'CCCD_BACK')}
-            accept="image/*,application/pdf"
-          >
-            {cccdBackFiles.length < 1 && (
-              <div>
-                <PlusOutlined />
-                <div style={{ marginTop: 8 }}>Tải lên</div>
-              </div>
-            )}
-          </Upload>
-        </Form.Item>
+          {/* ── Action Bar ── */}
+          <div className="mt-5 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1 h-5 bg-[#B30000] rounded-full" />
+              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide m-0">Hoàn tất</h3>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                icon={<SaveOutlined />}
+                size="large"
+                onClick={handleSaveDraft}
+                loading={createMutation.isPending || updateMutation.isPending}
+                className="!rounded-xl !border-gray-300 hover:!border-[#B30000] hover:!text-[#B30000] flex-1 sm:flex-none"
+              >
+                Lưu nháp
+              </Button>
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
+                size="large"
+                onClick={handleSubmitWithConfirm}
+                loading={submitMutation.isPending}
+                className="!rounded-xl !bg-[#B30000] !border-[#B30000] hover:!bg-[#E60000] hover:!border-[#E60000] flex-1 sm:flex-none"
+              >
+                Nộp hồ sơ
+              </Button>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              Sau khi nộp, hồ sơ sẽ chuyển sang trạng thái <strong>Chờ duyệt</strong> và bạn sẽ nhận email xác nhận.
+            </p>
+          </div>
 
-        {/* Buttons */}
-        <Space>
-          <Button onClick={handleSaveDraft} loading={createMutation.isPending || updateMutation.isPending}>
-            Lưu nháp
-          </Button>
-          {/* 👇 Thay đổi: gọi handleSubmitWithConfirm thay vì handleSubmit trực tiếp */}
-          <Button type="primary" onClick={handleSubmitWithConfirm} loading={submitMutation.isPending}>
-            Nộp hồ sơ
-          </Button>
-        </Space>
-      </Form>
-    </Card>
+        </Form>
+      </div>
+    </div>
   );
 };
 

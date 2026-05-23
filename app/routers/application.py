@@ -474,11 +474,19 @@ def update_application(
 
         "major_name": app.major.name,
 
+        "school_name": app.school.name,
+
+        "subject_group_name": app.subject_group.name,
+
+        "subjects": app.subject_group.subjects,
+
         "score": app.score,
 
         "scores": app.scores,
 
-        "submitted_at": app.submitted_at
+        "submitted_at": app.submitted_at,
+
+        "created_at": app.created_at
     }
 
 @router.delete("/{app_id}")

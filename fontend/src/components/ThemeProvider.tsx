@@ -1,23 +1,23 @@
 import React from 'react';
-import { ConfigProvider, theme } from 'antd';
+import { ConfigProvider } from 'antd';
 import viVN from 'antd/locale/vi_VN';
 
 const antdTheme = {
   token: {
-    colorPrimary: '#B30000',
-    colorPrimaryHover: '#E60000',
-    colorLink: '#0038F7',
+    colorPrimary: '#B30000',          // màu chính
+    colorPrimaryHover: '#E60000',     // hover button, link
+    colorLink: '#0038F7',             // link text
     colorLinkHover: '#002cb5',
     colorError: '#ff4d4f',
     colorSuccess: '#52c41a',
     colorWarning: '#faad14',
     borderRadius: 8,
-    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    fontFamily: 'Inter, system-ui, sans-serif',
   },
   components: {
     Layout: {
       headerBg: '#ffffff',
-      siderBg: '#1a1a1a',
+      siderBg: '#1a1a1a',            // sidebar tối
       triggerBg: '#B30000',
     },
     Menu: {

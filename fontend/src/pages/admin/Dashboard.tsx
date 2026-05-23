@@ -117,8 +117,15 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div>
-      <Title level={2} style={{ marginBottom: 24 }}>Tổng quan</Title>
+    <div className="min-h-screen bg-gray-50/80 p-4 md:p-6 space-y-6">
+      {/* ── Page Header ── */}
+      <div className="flex items-center gap-3">
+        <div className="w-1 h-7 bg-[#B30000] rounded-full" />
+        <div>
+          <h1 className="text-xl font-bold text-gray-800 m-0 leading-tight">Tổng quan</h1>
+          <p className="text-xs text-gray-400 mt-0.5">Khái quát xu hướng hồ sơ</p>
+        </div>
+      </div>
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}>
           <Card>

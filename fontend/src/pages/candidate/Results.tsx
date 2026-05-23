@@ -67,13 +67,13 @@ const Results: React.FC = () => {
       title: 'Chi tiết',
       key: 'action',
       render: (_: any, record: any) => (
-        <Button
-          type="link"
-          icon={<EyeOutlined />}
-          onClick={() => navigate(`/candidate/applications/${record.id}`)}
-        >
-          Xem chi tiết
-        </Button>
+          <Button
+            icon={<EyeOutlined />}
+            size="small"
+            onClick={() => navigate(`/candidate/applications/${record.id}`)}
+          >
+            Xem
+          </Button>
       ),
     },
   ];

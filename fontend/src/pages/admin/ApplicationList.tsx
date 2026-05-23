@@ -136,8 +136,15 @@ const ApplicationList: React.FC = () => {
   ];
 
   return (
-    <div>
-      <h2 style={{ marginBottom: 16 }}>Quản lý hồ sơ</h2>
+    <div className="min-h-screen bg-gray-50/80 p-4 md:p-6 space-y-6">
+      {/* ── Page Header ── */}
+      <div className="flex items-center gap-3">
+        <div className="w-1 h-7 bg-[#B30000] rounded-full" />
+        <div>
+          <h1 className="text-xl font-bold text-gray-800 m-0 leading-tight">Quản lý hồ sơ</h1>
+          <p className="text-xs text-gray-400 mt-0.5">Chi tiết hồ sơ học sinh</p>
+        </div>
+      </div>
       <Space style={{ marginBottom: 16 }} wrap>
         <Select
           placeholder="Chọn trường"

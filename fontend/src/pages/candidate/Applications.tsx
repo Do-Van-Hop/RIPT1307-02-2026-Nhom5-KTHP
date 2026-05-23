@@ -103,7 +103,7 @@ const MyApplications: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between'}}>
         <h2>Hồ sơ của tôi</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/candidate/applications/new')}>
           Tạo hồ sơ mới
