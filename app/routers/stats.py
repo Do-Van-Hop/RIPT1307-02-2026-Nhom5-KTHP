@@ -42,40 +42,5 @@ def get_stats(
         School.id
     ).all()
     
-    # thống kê theo major
-    by_major = db.query(
-        Major.name,
-        func.count(Application.id).label("total")
-    ).join(
-        Application,
-        Application.major_id == Major.id
-    ).group_by(
-        Major.id
-    ).all()
 
-    return {
-
-        "byStatus": [
-            {
-                "status": item.status,
-                "total": item.total
-            }
-            for item in by_status
-        ],
-
-        "bySchool": [
-            {
-                "school": item.name,
-                "total": item.total
-            }
-            for item in by_school
-        ],
-
-        "byMajor": [
-            {
-                "major": item.name,
-                "total": item.total
-            }
-            for item in by_major
-        ]
-    }
+    
