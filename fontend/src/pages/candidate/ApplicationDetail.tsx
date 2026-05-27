@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Card, Tag, Space, Image, Button, Spin, Typography, Tooltip, Avatar,
+  Card, Tag, Image, Button, Spin, Typography, Tooltip, Avatar,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -130,8 +130,8 @@ const ApplicationDetail: React.FC = () => {
     enabled: !!application,
   });
 
-  const schoolMap = new Map(schools?.map((s: any) => [s.id, s.name]));
-  const subjectGroupMap = new Map(subjectGroups?.map((sg: any) => [sg.id, sg.name]));
+  const schoolMap = new Map<number, string>((schools ?? []).map((s: any) => [s.id, s.name] as [number, string]));
+  const subjectGroupMap = new Map<number, string>((subjectGroups ?? []).map((sg: any) => [sg.id, sg.name] as [number, string]));
   const majorMap = allMajorsData?.map || new Map<number, string>();
 
   if (isLoading) {
@@ -258,7 +258,7 @@ const ApplicationDetail: React.FC = () => {
           <InfoRow
             icon={<BankOutlined />}
             label="Trường"
-            value={schoolMap.get(application.school_id) || `ID: ${application.school_id}`}
+            value={schoolMap.get(application.school_id) ?? `ID: ${application.school_id}`}
             accent="#0038F7"
           />
           <InfoRow

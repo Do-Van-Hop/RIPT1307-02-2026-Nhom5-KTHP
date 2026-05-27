@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Select, Space } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import * as catalogService from '../services/catalogService';
-import tsrequest from '../services/tsrequest';
 
 interface Props {
   onSelect: (schoolId: number, majorId: number, subjectGroupId: number) => void;

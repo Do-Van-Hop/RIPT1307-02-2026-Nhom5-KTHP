@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Card, Tag, Space, Button, Image, Modal, Input, message, Popconfirm, Skeleton, Avatar, Divider, Badge,
+ Tag, Button, Image, Modal, Input, message, Popconfirm, Skeleton, Avatar, Divider
 } from 'antd';
 import {
   ArrowLeftOutlined, CheckOutlined, CloseOutlined, UserOutlined, PhoneOutlined,
@@ -82,19 +82,6 @@ const AdminApplicationDetail: React.FC = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: majors } = useQuery({
-    queryKey: ['majors'],
-    queryFn: async () => {
-      // Lấy tất cả majors (có thể qua API /majors? không filter)
-      const res = await catalogService.getMajorsBySchool(0); // Không truyền school_id sẽ lấy tất cả? Service hiện tại getMajorsBySchool yêu cầu schoolId. Cần điều chỉnh hoặc dùng API khác.
-      // Thay vào đó, dùng getAllMajors nếu có. Ở đây tôi giả sử có endpoint /majors/ không filter.
-      // Thực tế trong code có useAllMajors hook, nhưng để độc lập, tôi sẽ gọi /majors với tham số schoolId=0 để lấy tất cả (nếu backend cho phép).
-      // Nếu không, có thể dùng useAllMajors. Tôi sẽ dùng useAllMajors hook để đơn giản.
-      return res.data;
-    },
-    staleTime: 5 * 60 * 1000,
-    enabled: !!application,
-  });
 
   // Dùng hook useAllMajors có sẵn để lấy tất cả majors
   const { data: allMajorsData } = useQuery({
@@ -121,8 +108,8 @@ const AdminApplicationDetail: React.FC = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const subjectGroupMap = new Map(subjectGroups?.map((sg: any) => [sg.id, sg.name]));
-  const schoolMap = new Map(schools?.map((s: any) => [s.id, s.name]));
+  const subjectGroupMap = new Map<number, string>((subjectGroups ?? []).map((sg: any) => [sg.id, sg.name]));
+  const schoolMap = new Map<number, string>((schools ?? []).map((s: any) => [s.id, s.name]));
   const majorMap = allMajorsData?.map || new Map<number, string>();
 
   const updateStatusMutation = useMutation({
@@ -281,17 +268,21 @@ const AdminApplicationDetail: React.FC = () => {
             <InfoRow
               icon={<BankOutlined />}
               label="Trường"
-              value={schoolMap.get(application.school_id) || `ID: ${application.school_id}`}
+              value={schoolMap.get(application.school_id) ?? `ID: ${application.school_id}`}
             />
             <InfoRow
               icon={<BookOutlined />}
               label="Ngành"
-              value={majorMap.get(application.major_id) || `ID: ${application.major_id}`}
+              value={majorMap.get(application.major_id) ?? `ID: ${application.major_id}`}
             />
             <InfoRow
               icon={<BookOutlined />}
               label="Tổ hợp môn"
-              value={subjectGroupMap.get(application.subject_group_id) || `ID: ${application.subject_group_id}`}
+                value={
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-[#0038F7]/10 text-[#0038F7] text-xs font-bold border border-[#0038F7]/20 tracking-wide">
+                    {(subjectGroupMap.get(application.subject_group_id) as unknown as React.ReactNode) || `ID: ${application.subject_group_id}`}
+                  </span>
+                }
             />
             <InfoRow
               icon={<FileTextOutlined />}

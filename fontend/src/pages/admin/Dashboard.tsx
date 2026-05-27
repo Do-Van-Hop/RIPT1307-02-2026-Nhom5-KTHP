@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Row, Col, Statistic, Table, Spin, Empty, Typography } from 'antd';
+import { Card, Row, Col, Statistic, Table, Spin, Empty } from 'antd';
 import {
   FileTextOutlined,
   ClockCircleOutlined,
@@ -11,8 +11,6 @@ import { Column } from '@ant-design/charts';
 import * as applicationService from '../../services/applicationService';
 import { useAllMajors } from '../../hooks/useAllMajors';
 import * as catalogService from '../../services/catalogService';
-
-const { Title } = Typography;
 
 const statusMap: Record<string, string> = {
   DRAFT: 'Nháp',

@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
-import { Table, Tag, Button, Select, Space, message } from 'antd';
+import { Table, Tag, Button, Select, Space} from 'antd';
 import { EyeOutlined } from '@ant-design/icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import * as applicationService from '../../services/applicationService';
 import * as catalogService from '../../services/catalogService';
 import { useAllMajors } from '../../hooks/useAllMajors';
 
 const { Option } = Select;
+interface ApplicationsResponse {
+  items: any[];
+  total: number;
+  page: number;
+  limit: number;
+}
 
 const statusMap: Record<string, { color: string; text: string }> = {
   DRAFT: { color: 'default', text: 'Nháp' },
@@ -19,7 +25,6 @@ const statusMap: Record<string, { color: string; text: string }> = {
 
 const ApplicationList: React.FC = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   const [filters, setFilters] = useState({
     schoolId: undefined as number | undefined,
@@ -55,7 +60,7 @@ const ApplicationList: React.FC = () => {
     enabled: !!filters.schoolId,
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<ApplicationsResponse>({
     queryKey: ['adminApplications', filters],
     queryFn: async () => {
       const res = await applicationService.getAllApplications({
@@ -67,7 +72,7 @@ const ApplicationList: React.FC = () => {
       });
       return res.data;
     },
-    keepPreviousData: true,
+    placeholderData: (previousData: any) => previousData,
   });
 
   const handleTableChange = (pagination: any) => {
@@ -87,7 +92,7 @@ const ApplicationList: React.FC = () => {
       dataIndex: 'school_id',
       key: 'school_id',
       render: (schoolId: number) => {
-        const school = schools?.find((s: any) => s.id === schoolId);
+        const school = schools?.find((s: unknown) => (s as { id: number }).id === schoolId);
         return school?.name || `ID: ${schoolId}`;
       },
     },

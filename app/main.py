@@ -9,7 +9,10 @@ from app.routers import auth, application, school, major, subject_group, file, s
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Trong thực tế nên để url cụ thể của FE
+    allow_origins=[
+        "https://grand-salmiakki-31250b.netlify.app",
+        "http://localhost:5173"
+    ], # Trong thực tế nên để url cụ thể của FE
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Table, Button, Space, Modal, Form, Input, Select, Popconfirm, message,
-  Tag, Card, Row, Col, Badge, Tooltip, Empty, Divider, Typography,
+  Tag, Card, Row, Col, Badge, Tooltip, Empty
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, BankOutlined,
@@ -10,9 +10,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as catalogService from '../../services/catalogService';
 import { useAllMajors } from '../../hooks/useAllMajors';
+import type { TablePaginationPosition } from 'antd/lib/table/interface';
 
-const { Option } = Select;
-const { Text, Title } = Typography;
 
 interface School {
   id: number;
@@ -591,7 +590,7 @@ const UnifiedManagement: React.FC = () => {
   const paginationConfig = {
     pageSize: 5,
     showSizeChanger: false,
-    position: ['bottomCenter'] as const,
+    position: ['bottomCenter'] as TablePaginationPosition[],
     size: 'small' as const,
   };
 
