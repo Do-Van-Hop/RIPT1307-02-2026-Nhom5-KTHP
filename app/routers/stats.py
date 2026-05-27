@@ -79,5 +79,3 @@ def get_stats(
             for item in by_major
         ]
     }
-
-    

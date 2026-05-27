@@ -9,4 +9,4 @@ class SubjectGroupResponse(BaseModel):
 
     id: int
     name: str
-    subjects: list[str] 
+    subjects: list[str]
