@@ -10,7 +10,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://grand-salmiakki-31250b.netlify.app",
+        "https://tuyensinh.netlify.app",
         "http://localhost:5173"
     ], # Trong thực tế nên để url cụ thể của FE
     allow_credentials=True,
