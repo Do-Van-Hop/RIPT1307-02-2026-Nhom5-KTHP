@@ -8,11 +8,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 connect_args = {}
 
 if "aivencloud.com" in DATABASE_URL:
-    connect_args = {
-        "ssl": {
-            "ca": "./ca.pem"
-        }
-    }
+    connect_args = {"ssl": {}}
 
 engine = create_engine(
     DATABASE_URL,
