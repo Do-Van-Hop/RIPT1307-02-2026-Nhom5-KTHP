@@ -2,7 +2,8 @@ import axios from 'axios';
 import { message } from 'antd';
 import { useAuthStore } from '../store/authStore';
 
-const baseURL = import.meta.env.VITE_API_URL || '/api';
+const baseURL =
+  import.meta.env.VITE_API_BASE_URL || '/api';
 
 const tsrequest = axios.create({
   baseURL,
