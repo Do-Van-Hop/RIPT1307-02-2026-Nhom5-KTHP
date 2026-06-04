@@ -5,7 +5,6 @@ from app.core.cloudinary_config import init_cloudinary
 
 from app.routers import auth, application, school, major, subject_group, file, stats
 
-
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -25,7 +24,7 @@ app.include_router(application.router)
 app.include_router(school.router)
 app.include_router(major.router)
 app.include_router(subject_group.router)
-app.include_router(file.router)
+
 app.include_router(stats.router)
 
 @app.get("/")
