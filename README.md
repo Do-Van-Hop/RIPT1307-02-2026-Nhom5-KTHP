@@ -8,6 +8,9 @@ Dự án được xây dựng nhằm tối ưu hóa quy trình quản lý và n�
 
 - Quản trị viên (Admin): Xem bảng điều khiển thống kê số liệu, duyệt hoặc từ chối hồ sơ kèm lý do chi tiết, quản lý danh mục trường học và ngành học.
 
+Deploy Netlify: Có thể xem trực tiếp demo thông qua
+https://tuyensinh.netlify.app/login
+
 # II. KIẾN TRÚC HỆ THỐNG & CÔNG NGHỆ SỬ DỤNG
 
 **1. Phân hệ Backend (/app)**
