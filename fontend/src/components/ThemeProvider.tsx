@@ -4,9 +4,9 @@ import viVN from 'antd/locale/vi_VN';
 
 const antdTheme = {
   token: {
-    colorPrimary: '#B30000',          // màu chính
-    colorPrimaryHover: '#E60000',     // hover button, link
-    colorLink: '#0038F7',             // link text
+    colorPrimary: '#B30000',
+    colorPrimaryHover: '#E60000',
+    colorLink: '#0038F7',
     colorLinkHover: '#002cb5',
     colorError: '#ff4d4f',
     colorSuccess: '#52c41a',
@@ -17,7 +17,7 @@ const antdTheme = {
   components: {
     Layout: {
       headerBg: '#ffffff',
-      siderBg: '#1a1a1a',            // sidebar tối
+      siderBg: '#1a1a1a',
       triggerBg: '#B30000',
     },
     Menu: {

@@ -30,7 +30,6 @@ interface SubjectGroup {
   subjects: string[];
 }
 
-// ── Màu nhãn tổ hợp môn ──
 const subjectTagColor: Record<string, string> = {
   'Toán': 'blue', 'Lý': 'geekblue', 'Hóa': 'purple', 'Sinh': 'green',
   'Văn': 'volcano', 'Sử': 'orange', 'Địa': 'cyan', 'Anh': 'gold',

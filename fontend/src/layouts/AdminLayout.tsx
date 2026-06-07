@@ -135,8 +135,7 @@ const AdminLayout: React.FC = () => {
               {pageTitle}
             </h1>
           </div>
-
-          {/* Right: actions – chỉ giữ avatar + logout */}
+          {/* Right: user info + logout */}
           <div className="flex items-center gap-3">
             {/* Avatar */}
             <div className="flex items-center gap-2.5 px-3 py-1.5">
@@ -194,7 +193,7 @@ const AdminLayout: React.FC = () => {
         </footer>
       </Layout>
 
-      {/* ── GLOBAL SCOPED STYLES (giữ nguyên) ── */}
+      {/* ── GLOBAL SCOPED STYLES ── */}
       <style>{`
         .admin-menu-item.ant-menu-item {
           margin: 2px 12px !important;

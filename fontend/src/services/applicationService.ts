@@ -50,8 +50,8 @@ export const uploadFile = (file: File, fileType: string) => {
 };
 
 export const getAllApplications = (params?: {
-  school_id?: number;      // đã sửa
-  major_id?: number;       // đã sửa
+  school_id?: number;
+  major_id?: number;
   status?: string;
   page?: number;
   limit?: number;
